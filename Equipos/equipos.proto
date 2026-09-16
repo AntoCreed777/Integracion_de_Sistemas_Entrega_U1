@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package Equipos;
+
+import "google/protobuf/empty.proto";
+
+
+// En este momento se interpreta que un equipo es en si un tipo de unidad,
+// no una unidad individual.
+
+message Equipo {
+  string id = 1;
+  string nombre = 2;
+  string descripcion = 3;
+  int32 unidades_disponibles = 4;
+}
+
+// Solicitud que identifica un equipo.
+message EquipoRequest {
+  string id = 1;
+}
+
+message EquipoDisponibilidad {
+  string id = 1;
+  int32 unidades_disponibles = 2;
+}
+
+service ServicioEquipos {
+  // Consulta un equipo por su ID.
+  rpc ConsultarEquipo(EquipoRequest) returns (Equipo);
+
+  // Consulta la disponibilidad de un equipo por su ID.
+  rpc ConsultarDisponibilidadEquipo(EquipoRequest) returns (EquipoDisponibilidad);
+
+  // Lista el catálogo completo de equipos.
+  rpc ListarEquipos(google.protobuf.Empty) returns (stream Equipo);   // TODO: Hay que definir un limite maximo
+
+  // Reserva una unidad disponible.
+  rpc ReservarEquipo(EquipoRequest) returns (google.protobuf.Empty);
+
+  // Libera una unidad reservada.
+  rpc LiberarEquipo(EquipoRequest) returns (google.protobuf.Empty);
+}
