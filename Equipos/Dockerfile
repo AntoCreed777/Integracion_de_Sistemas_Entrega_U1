@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN python generar_grpc.py
+
+
 EXPOSE 50051
 
 CMD ["python", "-m", "app.main"]

@@ -16,6 +16,10 @@ services:
         condition: service_healthy
     volumes:
       - ./Equipos:/app
+    command:
+    - sh
+    - -c
+    - python generar_grpc.py && exec python -m app.main
 
   equipos-db:
     image: postgres:16-alpine
