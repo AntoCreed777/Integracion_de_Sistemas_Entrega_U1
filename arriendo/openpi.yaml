@@ -1,0 +1,128 @@
+openapi: 3.0.3
+
+info:
+  title: API ArriendaPro
+  description: API para la gestión de arriendos.
+  version: 1.0.0
+
+paths:
+  v1/clients:
+    post:
+      sumary: Crear un nuevo cliente
+      description: Endpoint para crear un nuevo cliente en el sistema de arriendos.
+    
+  v1/clients/{clientId}:
+    get:
+      sumary: Obtener datos de un cliente
+      description: Endpoint para obtener los datos de un cliente específico mediante su ID.
+      operationId: getClientById
+      security:
+        - 
+      parameters:
+       - name: Id
+          in: path
+          description: ID del cliente a obtener
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Datos obtenidos correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotAuthorizedError'
+
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  v1/arriendos:
+    post:
+      sumary: Crear un nuevo arriendo
+      description: Endpoint para crear un nuevo arriendo en el sistema.
+
+
+components:
+
+  schemas:
+
+    ClientResponse:
+      type: object
+
+      properties:
+        id:
+          type: string
+          description: ID del cliente
+
+        name:
+          type: string
+          description: Nombre del cliente
+
+        email:
+          type: string
+          description: Correo electrónico del cliente
+
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creación del cliente
+
+        rentalHistory:
+          type: array
+          description: Historial de arriendos del cliente
+          items:
+            type: object
+            properties:
+              active:
+                type: array
+                description: Lista de IDs de arriendos activos
+                items:
+                  type: string
+              completed:
+                type: array
+                description: Lista de IDs de arriendos finalizados
+                items:
+                  type: string
+
+    NotAuthorizedError:
+      type: object
+      required:
+        - code
+        - message
+
+      properties:
+        code:
+          type: string
+          description: Código de error indicando que no está autorizado
+
+        message:
+          type: string
+          description: Mensaje de error indicando que no está autorizado
+
+    NotFoundError:
+      type: object
+      required:
+        - code
+        - message
+
+      properties:
+        code:
+          type: string
+          description: Código de error indicando que el recurso no fue encontrado
+
+        message:
+          type: string
+          description: Mensaje de error indicando que el recurso no fue encontrado
+
