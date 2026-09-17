@@ -1,18 +1,58 @@
 import os
-import time
+from concurrent import futures
+
+import grpc
+
+from app.servicio_equipos import ServicioEquipos
+from generated import equipos_pb2_grpc
+
+
+def obtener_puerto_grpc() -> int:
+    valor = os.getenv("GRPC_PORT", "50051")
+
+    try:
+        puerto = int(valor)
+    except ValueError as error:
+        raise ValueError("GRPC_PORT debe ser un numero entero") from error
+
+    if not 1 <= puerto <= 65535:
+        raise ValueError("GRPC_PORT debe estar entre 1 y 65535")
+
+    return puerto
+
+
+def crear_servidor(direccion: str) -> grpc.Server:
+    servidor = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=10),
+    )
+
+    equipos_pb2_grpc.add_ServicioEquiposServicer_to_server(
+        ServicioEquipos(),
+        servidor,
+    )
+
+    puerto_asignado = servidor.add_insecure_port(direccion)
+    if puerto_asignado == 0:
+        raise RuntimeError(f"No se pudo escuchar en {direccion}")
+
+    return servidor
 
 
 def main() -> None:
-    host = os.getenv("DATABASE_HOST", "equipos-db")
-    port = os.getenv("DATABASE_PORT", "5432")
-    database = os.getenv("DATABASE_NAME", os.getenv("POSTGRES_DB", "equipos_db"))
+    host = os.getenv("GRPC_HOST", "[::]")
+    puerto = obtener_puerto_grpc()
+    direccion = f"{host}:{puerto}"
 
-    print("Microservicio Equipos iniciado")
-    print(f"Base de datos configurada en {host}:{port}/{database}")
-    print("Reemplaza app/main.py por el servidor gRPC cuando esté listo.")
+    servidor = crear_servidor(direccion)
+    servidor.start()
 
-    while True:
-        time.sleep(60)
+    print(f"Servidor gRPC de Equipos escuchando en {direccion}")
+
+    try:
+        servidor.wait_for_termination()
+    except KeyboardInterrupt:
+        print("Deteniendo servidor gRPC")
+        servidor.stop(grace=5)
 
 
 if __name__ == "__main__":

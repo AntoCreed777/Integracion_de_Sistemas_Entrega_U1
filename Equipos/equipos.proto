@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package Equipos;
+package equipos.v1;
 
 import "google/protobuf/empty.proto";
 
