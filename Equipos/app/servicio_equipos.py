@@ -1,7 +1,7 @@
 import grpc
 from app.database import SessionLocal
-from generated import equipos_pb2, equipos_pb2_grpc
 from app.models.equipo import Equipo, liberar_equipo, reservar_equipo
+from generated import equipos_pb2, equipos_pb2_grpc
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 
@@ -50,8 +50,6 @@ class ServicioEquipos(equipos_pb2_grpc.ServicioEquiposServicer):
                 f"Error (múltiples resultados): {str(e)}",
             )
         except Exception as e:
-            import traceback
-            traceback.print_exc()
 
             context.abort(
                 grpc.StatusCode.INTERNAL,

@@ -2,11 +2,9 @@ import os
 from concurrent import futures
 
 import grpc
-
+from app.init_db import crear_tablas
 from app.servicio_equipos import ServicioEquipos
 from generated import equipos_pb2_grpc
-
-from app.init_db import crear_tablas
 
 
 def obtener_puerto_grpc() -> int:
@@ -46,7 +44,6 @@ def main() -> None:
     direccion = f"{host}:{puerto}"
 
     crear_tablas()
-    
 
     servidor = crear_servidor(direccion)
     servidor.start()
