@@ -6,6 +6,8 @@ import grpc
 from app.servicio_equipos import ServicioEquipos
 from generated import equipos_pb2_grpc
 
+from app.init_db import crear_tablas
+
 
 def obtener_puerto_grpc() -> int:
     valor = os.getenv("GRPC_PORT", "50051")
@@ -42,6 +44,9 @@ def main() -> None:
     host = os.getenv("GRPC_HOST", "[::]")
     puerto = obtener_puerto_grpc()
     direccion = f"{host}:{puerto}"
+
+    crear_tablas()
+    
 
     servidor = crear_servidor(direccion)
     servidor.start()
