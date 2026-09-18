@@ -1,5 +1,6 @@
 grpcio
 grpcio-tools
+grpcio-health-checking
 psycopg[binary]
 python-dotenv
 SQLAlchemy>=2.0

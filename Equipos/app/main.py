@@ -7,6 +7,10 @@ from app.servicio_equipos import ServicioEquipos
 from generated import equipos_pb2_grpc
 
 
+from grpc_health.v1 import health
+from grpc_health.v1 import health_pb2
+from grpc_health.v1 import health_pb2_grpc
+
 def obtener_puerto_grpc() -> int:
     valor = os.getenv("GRPC_PORT", "50051")
 
@@ -26,6 +30,12 @@ def crear_servidor(direccion: str) -> grpc.Server:
         futures.ThreadPoolExecutor(max_workers=10),
     )
 
+    # Servicio de health
+    health_servicer = health.HealthServicer()
+    health_servicer.set("", health_pb2.HealthCheckResponse.SERVING)
+    health_pb2_grpc.add_HealthServicer_to_server(health_servicer, servidor)
+
+    # Servicio de equipos
     equipos_pb2_grpc.add_ServicioEquiposServicer_to_server(
         ServicioEquipos(),
         servidor,
