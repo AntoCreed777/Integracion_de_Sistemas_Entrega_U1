@@ -2,3 +2,4 @@ grpcio
 grpcio-tools
 psycopg[binary]
 python-dotenv
+SQLAlchemy>=2.0
