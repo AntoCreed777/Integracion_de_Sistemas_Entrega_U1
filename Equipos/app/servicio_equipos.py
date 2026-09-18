@@ -1,46 +1,153 @@
 import grpc
-
-from generated import equipos_pb2
-from generated import equipos_pb2_grpc
+from app.database import SessionLocal
+from generated import equipos_pb2, equipos_pb2_grpc
+from app.models.equipo import Equipo, liberar_equipo, reservar_equipo
+from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
 
 
 class ServicioEquipos(equipos_pb2_grpc.ServicioEquiposServicer):
-    """Implementacion pendiente del contrato definido en equipos.proto."""
+    """Implementacion del contrato definido en equipos.proto."""
 
     def ConsultarEquipo(self, request, context):
-        # TODO: Buscar el equipo por request.id.
-        context.abort(
-            grpc.StatusCode.UNIMPLEMENTED,
-            "ConsultarEquipo aun no ha sido implementado",
-        )
+        db = SessionLocal()
+        try:
+            equipo = (
+                db.query(Equipo)
+                .filter(
+                    Equipo.equipo_id == int(request.id),
+                    Equipo.activo == True,
+                )
+                .one()
+            )
+
+            print("equipo:", equipo)
+            print("equipo_id:", equipo.equipo_id, type(equipo.equipo_id))
+            print("nombre:", equipo.nombre, type(equipo.nombre))
+            print("descripcion:", equipo.descripcion, type(equipo.descripcion))
+            print(
+                "cantidad_disponible:",
+                equipo.cantidad_disponible,
+                type(equipo.cantidad_disponible),
+            )
+
+            response = equipos_pb2.Equipo(
+                id=int(equipo.equipo_id),
+                nombre=str(equipo.nombre),
+                descripcion=str(equipo.descripcion),
+                unidades_disponibles=int(equipo.cantidad_disponible),
+            )
+
+            return response
+
+        except NoResultFound as e:
+            context.abort(
+                grpc.StatusCode.NOT_FOUND,
+                f"Equipo no encontrado: {str(e)}",
+            )
+        except MultipleResultsFound as e:
+            context.abort(
+                grpc.StatusCode.INTERNAL,
+                f"Error (múltiples resultados): {str(e)}",
+            )
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+
+            context.abort(
+                grpc.StatusCode.INTERNAL,
+                f"Error al consultar equipo: {str(e)}",
+            )
+        finally:
+            db.close()
 
     def ConsultarDisponibilidadEquipo(self, request, context):
-        # TODO: Consultar las unidades disponibles del equipo.
-        context.abort(
-            grpc.StatusCode.UNIMPLEMENTED,
-            "ConsultarDisponibilidadEquipo aun no ha sido implementado",
-        )
+        db = SessionLocal()
+        try:
+            equipo = (
+                db.query(Equipo)
+                .filter(Equipo.equipo_id == int(request.id), Equipo.activo == True)
+                .one()
+            )
+            return equipos_pb2.EquipoDisponibilidad(
+                id=equipo.equipo_id, unidades_disponibles=equipo.cantidad_disponible
+            )
+        except NoResultFound as e:
+            context.abort(
+                grpc.StatusCode.NOT_FOUND,
+                f"Equipo no encontrado: {str(e)}",
+            )
+        except MultipleResultsFound as e:
+            context.abort(
+                grpc.StatusCode.INTERNAL,
+                f"Error (múltiples resultados): {str(e)}",
+            )
+        except Exception as e:
+            context.abort(
+                grpc.StatusCode.INTERNAL,
+                f"Error al consultar disponibilidad: {str(e)}",
+            )
+
+        finally:
+            db.close()
 
     def ListarEquipos(self, request, context):
-        # TODO: Obtener el catalogo y emitir cada equipo con yield.
-        context.abort(
-            grpc.StatusCode.UNIMPLEMENTED,
-            "ListarEquipos aun no ha sido implementado",
-        )
+        db = SessionLocal()
+        # Deberiamos de colocar un limite de resultados y paginacion
+        try:
+            equipos = db.query(Equipo).filter(Equipo.activo == True).yield_per(100)
 
-        # Mantiene este metodo como generador para el server streaming.
-        yield equipos_pb2.Equipo()
+            for equipo in equipos:
+                yield equipos_pb2.Equipo(
+                    id=equipo.equipo_id,
+                    nombre=equipo.nombre,
+                    descripcion=equipo.descripcion,
+                    unidades_disponibles=equipo.cantidad_disponible,
+                )
+
+        except Exception as e:
+            context.abort(
+                grpc.StatusCode.INTERNAL,
+                f"Error al listar equipos: {str(e)}",
+            )
+        finally:
+            db.close()
 
     def ReservarEquipo(self, request, context):
-        # TODO: Descontar una unidad de forma atomica.
-        context.abort(
-            grpc.StatusCode.UNIMPLEMENTED,
-            "ReservarEquipo aun no ha sido implementado",
-        )
+        db = SessionLocal()
+
+        try:
+            reservado = reservar_equipo(db, int(request.id))
+
+        except Exception as e:
+            context.abort(
+                grpc.StatusCode.INTERNAL,
+                f"Error al reservar equipo: {str(e)}",
+            )
+        finally:
+            db.close()
+
+        if not reservado:
+            context.abort(
+                grpc.StatusCode.FAILED_PRECONDITION,
+                "No se puede reservar el equipo",
+            )
 
     def LiberarEquipo(self, request, context):
-        # TODO: Devolver una unidad sin superar el total disponible.
-        context.abort(
-            grpc.StatusCode.UNIMPLEMENTED,
-            "LiberarEquipo aun no ha sido implementado",
-        )
+        db = SessionLocal()
+
+        try:
+            reservado = liberar_equipo(db, int(request.id))
+
+        except Exception as e:
+            context.abort(
+                grpc.StatusCode.INTERNAL,
+                f"Error al liberar equipo: {str(e)}",
+            )
+        finally:
+            db.close()
+
+        if not reservado:
+            context.abort(
+                grpc.StatusCode.FAILED_PRECONDITION,
+                "No se puede liberar el equipo",
+            )

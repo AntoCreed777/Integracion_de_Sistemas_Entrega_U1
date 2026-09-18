@@ -62,3 +62,46 @@ class Equipo(Base):
             name="ck_equipos_disponible_menor_total",
         ),
     )
+
+from sqlalchemy import update
+from sqlalchemy.orm import Session
+
+
+
+def reservar_equipo(db: Session, equipo_id: int) -> bool:
+
+    stmt = (
+        update(Equipo)
+        .where(
+            Equipo.equipo_id == equipo_id,
+            Equipo.activo == True,
+            Equipo.cantidad_disponible > 0
+        )
+        .values(
+            cantidad_disponible=Equipo.cantidad_disponible - 1
+        )
+    )
+
+    result = db.execute(stmt)
+    db.commit()
+
+    return result.rowcount == 1
+
+def liberar_equipo(db: Session, equipo_id: int) -> bool:
+
+    stmt = (
+        update(Equipo)
+        .where(
+            Equipo.equipo_id == equipo_id,
+            Equipo.activo == True,
+            Equipo.cantidad_disponible + 1 <= Equipo.cantidad_total
+        )
+        .values(
+            cantidad_disponible=Equipo.cantidad_disponible + 1
+        )
+    )
+
+    result = db.execute(stmt)
+    db.commit()
+
+    return result.rowcount == 1

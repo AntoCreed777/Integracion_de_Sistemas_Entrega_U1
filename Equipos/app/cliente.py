@@ -6,8 +6,7 @@ import grpc
 from google.protobuf import empty_pb2
 from google.protobuf.json_format import MessageToJson
 
-from generated import equipos_pb2
-from generated import equipos_pb2_grpc
+from generated import equipos_pb2, equipos_pb2_grpc
 
 
 OPERACIONES_CON_ID = {
@@ -30,6 +29,7 @@ def crear_argumentos() -> argparse.Namespace:
     parser.add_argument(
         "id",
         nargs="?",
+        type=int,
         help="ID del equipo; no se utiliza al listar",
     )
     return parser.parse_args()
@@ -39,7 +39,7 @@ def imprimir_mensaje(mensaje) -> None:
     print(MessageToJson(mensaje, preserving_proto_field_name=True))
 
 
-def ejecutar(stub, operacion: str, equipo_id: str | None) -> None:
+def ejecutar(stub, operacion: str, equipo_id: int | None) -> None:
     timeout = float(os.getenv("GRPC_CLIENT_TIMEOUT", "5"))
 
     if operacion == "listar":
