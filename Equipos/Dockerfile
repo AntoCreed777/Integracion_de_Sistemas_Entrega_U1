@@ -48,4 +48,4 @@ COPY pytest.ini ./
 
 # Se sobreescriben
 HEALTHCHECK NONE
-CMD ["sh", "-c", "python -m app.init_db && pytest -v"]
+CMD ["sh", "-c", "python -m app.init_db && pytest"]
