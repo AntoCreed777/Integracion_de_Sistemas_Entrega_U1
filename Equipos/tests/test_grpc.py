@@ -8,13 +8,13 @@ def test_consultar_equipo(grpc_channel, crear_equipo):
         nombre="Notebook",
         descripcion="Notebook Lenovo",
         cantidad_total=10,
-        cantidad_disponible=5,
+        unidades_disponibles=5,
         activo=True
     )
 
-    response = stub.ConsultarEquipo(equipos_pb2.EquipoRequest(id=equipo.id))
+    response = stub.ConsultarEquipo(equipos_pb2.EquipoRequest(id=equipo.equipo_id))
 
     assert response.id == equipo.id
     assert response.nombre == equipo.nombre
     assert response.descripcion == equipo.descripcion
-    assert response.unidades_disponibles == equipo.cantidad_disponible
+    assert response.unidades_disponibles == equipo.unidades_disponibles

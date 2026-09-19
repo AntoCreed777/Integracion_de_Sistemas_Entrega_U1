@@ -43,7 +43,7 @@ def crear_equipo(db_session):
         nombre="Equipo de prueba",
         descripcion="Descripción de prueba",
         cantidad_total=10,
-        cantidad_disponible=10,
+        unidades_disponibles=10,
         activo=True,
     ):
         equipo = Equipo(
@@ -51,7 +51,7 @@ def crear_equipo(db_session):
             nombre=nombre,
             descripcion=descripcion,
             cantidad_total=cantidad_total,
-            cantidad_disponible=cantidad_disponible,
+            unidades_disponibles=unidades_disponibles,
             activo=activo,
         )
 

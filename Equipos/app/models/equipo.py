@@ -32,7 +32,7 @@ class Equipo(Base):
         nullable=False,
     )
 
-    cantidad_disponible: Mapped[int] = mapped_column(
+    unidades_disponibles: Mapped[int] = mapped_column(
         nullable=False,
     )
 
@@ -53,11 +53,11 @@ class Equipo(Base):
             name="ck_equipos_total_no_negativo",
         ),
         CheckConstraint(
-            "cantidad_disponible >= 0",
+            "unidades_disponibles >= 0",
             name="ck_equipos_disponible_no_negativo",
         ),
         CheckConstraint(
-            "cantidad_disponible <= cantidad_total",
+            "unidades_disponibles <= cantidad_total",
             name="ck_equipos_disponible_menor_total",
         ),
     )
@@ -74,9 +74,9 @@ def reservar_equipo(db: Session, equipo_id: int) -> bool:
         .where(
             Equipo.equipo_id == equipo_id,
             Equipo.activo == True,
-            Equipo.cantidad_disponible > 0,
+            Equipo.unidades_disponibles > 0,
         )
-        .values(cantidad_disponible=Equipo.cantidad_disponible - 1)
+        .values(unidades_disponibles=Equipo.unidades_disponibles - 1)
     )
 
     result = db.execute(stmt)
@@ -92,9 +92,9 @@ def liberar_equipo(db: Session, equipo_id: int) -> bool:
         .where(
             Equipo.equipo_id == equipo_id,
             Equipo.activo == True,
-            Equipo.cantidad_disponible + 1 <= Equipo.cantidad_total,
+            Equipo.unidades_disponibles + 1 <= Equipo.cantidad_total,
         )
-        .values(cantidad_disponible=Equipo.cantidad_disponible + 1)
+        .values(unidades_disponibles=Equipo.unidades_disponibles + 1)
     )
 
     result = db.execute(stmt)

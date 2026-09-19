@@ -25,16 +25,16 @@ class ServicioEquipos(equipos_pb2_grpc.ServicioEquiposServicer):
             print("nombre:", equipo.nombre, type(equipo.nombre))
             print("descripcion:", equipo.descripcion, type(equipo.descripcion))
             print(
-                "cantidad_disponible:",
-                equipo.cantidad_disponible,
-                type(equipo.cantidad_disponible),
+                "unidades_disponibles:",
+                equipo.unidades_disponibles,
+                type(equipo.unidades_disponibles),
             )
 
             response = equipos_pb2.Equipo(
                 id=int(equipo.equipo_id),
                 nombre=str(equipo.nombre),
                 descripcion=str(equipo.descripcion),
-                unidades_disponibles=int(equipo.cantidad_disponible),
+                unidades_disponibles=int(equipo.unidades_disponibles),
             )
 
             return response
@@ -67,7 +67,7 @@ class ServicioEquipos(equipos_pb2_grpc.ServicioEquiposServicer):
                 .one()
             )
             return equipos_pb2.EquipoDisponibilidad(
-                id=equipo.equipo_id, unidades_disponibles=equipo.cantidad_disponible
+                id=equipo.equipo_id, unidades_disponibles=equipo.unidades_disponibles
             )
         except NoResultFound as e:
             context.abort(
@@ -99,7 +99,7 @@ class ServicioEquipos(equipos_pb2_grpc.ServicioEquiposServicer):
                     id=equipo.equipo_id,
                     nombre=equipo.nombre,
                     descripcion=equipo.descripcion,
-                    unidades_disponibles=equipo.cantidad_disponible,
+                    unidades_disponibles=equipo.unidades_disponibles,
                 )
 
         except Exception as e:
