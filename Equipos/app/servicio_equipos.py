@@ -3,7 +3,7 @@ from app.database import SessionLocal
 from app.models.equipo import Equipo, liberar_equipo, reservar_equipo
 from generated import equipos_pb2, equipos_pb2_grpc
 from sqlalchemy.orm.exc import MultipleResultsFound, NoResultFound
-
+from google.protobuf import empty_pb2
 
 class ServicioEquipos(equipos_pb2_grpc.ServicioEquiposServicer):
     """Implementacion del contrato definido en equipos.proto."""
@@ -130,6 +130,8 @@ class ServicioEquipos(equipos_pb2_grpc.ServicioEquiposServicer):
                 "No se puede reservar el equipo",
             )
 
+        return empty_pb2.Empty()
+
     def LiberarEquipo(self, request, context):
         db = SessionLocal()
 
@@ -149,3 +151,5 @@ class ServicioEquipos(equipos_pb2_grpc.ServicioEquiposServicer):
                 grpc.StatusCode.FAILED_PRECONDITION,
                 "No se puede liberar el equipo",
             )
+
+        return empty_pb2.Empty()

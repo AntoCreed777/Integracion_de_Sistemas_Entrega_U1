@@ -3,7 +3,7 @@ services:
     build:
       context: ./Equipos
       dockerfile: Dockerfile
-      target: base
+      target: test
 
     container_name: equipos-api
 
@@ -30,8 +30,6 @@ services:
     ports:
       - "${EQUIPOS_DB_PORT}:5432"
 
-    volumes:
-      - equipos_postgres_data:/var/lib/postgresql/data
 
     healthcheck:
       test:
@@ -42,6 +40,3 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-volumes:
-  equipos_postgres_data:

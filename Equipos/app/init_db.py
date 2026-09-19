@@ -10,3 +10,6 @@ def crear_tablas():
     inspector = inspect(engine)
 
     print(inspector.get_table_names())
+
+if __name__ == "__main__":
+    crear_tablas()
