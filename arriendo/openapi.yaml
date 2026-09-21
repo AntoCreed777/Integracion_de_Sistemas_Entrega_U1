@@ -1,0 +1,486 @@
+openapi: 3.0.3
+
+info:
+  title: API ArriendaPro
+  description: API para la gestión de arriendos.
+  version: 1.0.0
+
+security:
+  - BearerAuth: []
+
+paths:
+  /v1/clients:
+    post:
+      summary: Crear un nuevo cliente
+      description: Endpoint para crear un nuevo cliente en el sistema de arriendos.
+      operationId: createClient
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+      
+      responses:
+        '201':
+          description: Cliente creado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+        '400':
+          description: Solicitud incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotAuthorizedError'
+
+        '503':
+          description: Servicio no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailableError'
+
+  /v1/clients/{clientId}:
+    get:
+      summary: Obtener datos de un cliente
+      description: Endpoint para obtener los datos de un cliente específico mediante su ID.
+      operationId: getClientById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: clientId
+          in: path
+          description: ID del cliente a obtener
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Datos obtenidos correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientResponse'
+
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotAuthorizedError'
+
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  /v1/clients/list:
+    get:
+      summary: Obtener todos los clientes
+      description: Endpoint para obtener la lista de todos los clientes registrados en el sistema.
+      operationId: getAllClients
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de clientes obtenida correctamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClientResponse'
+
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotAuthorizedError'
+
+        '404':
+          description: No se encontraron clientes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  /v1/rentals:
+    post:
+      summary: Crear un nuevo arriendo
+      description: Endpoint para crear un nuevo arriendo en el sistema.
+      operationId: createRental
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RentalRequest'
+      responses:
+        '201':
+          description: Cliente creado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentalResponse'
+
+        '400':
+          description: Solicitud incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotAuthorizedError'
+
+        '503':
+          description: Servicio no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailableError'
+  
+  /v1/rentals/{rentalId}:
+    get:
+      summary: Obtener datos de un arriendo
+      description: Endpoint para obtener los datos de un arriendo específico mediante su ID.
+      operationId: getRentalById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: rentalId
+          in: path
+          description: ID del arriendo a obtener
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Datos obtenidos correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentalResponse'
+
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotAuthorizedError'
+
+        '404':
+          description: Arriendo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  /v1/rentals/list:
+    get:
+      summary: Obtener todos los arriendos
+      description: Endpoint para obtener la lista de todos los arriendos registrados en el sistema.
+      operationId: getAllRentals
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de arriendos obtenida correctamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RentalResponse'
+
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotAuthorizedError'
+
+        '404':
+          description: No se encontraron arriendos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  /v1/rentals/{rentalId}/return:
+    post:
+      summary: Retornar un arriendo
+      description: Endpoint para marcar un arriendo como retornado.
+      operationId: returnRental
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: rentalId
+          in: path
+          description: ID del arriendo a cancelar
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Arriendo retornado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentalResponse'
+
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotAuthorizedError'
+
+        '404':
+          description: Arriendo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  /v1/rentals/{rentalId}/cancel:
+    post:
+      summary: Cancelar un arriendo
+      description: Endpoint para cancelar un arriendo.
+      operationId: cancelRental
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: rentalId
+          in: path
+          description: ID del arriendo a cancelar
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Arriendo cancelado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentalResponse'
+
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotAuthorizedError'
+
+        '404':
+          description: Arriendo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+
+components:
+
+  schemas:
+
+    ClientResponse:
+      type: object
+
+      properties:
+        id:
+          type: integer
+          description: ID del cliente
+
+        name:
+          type: string
+          description: Nombre del cliente
+
+        email:
+          type: string
+          description: Correo electrónico del cliente
+
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de creación del cliente
+
+        rentalHistory:
+          type: array
+          description: Historial de arriendos del cliente
+          items:
+            type: object
+            properties:
+              active:
+                type: array
+                description: Lista de IDs de arriendos activos
+                items:
+                  type: string
+              completed:
+                type: array
+                description: Lista de IDs de arriendos finalizados
+                items:
+                  type: string
+      
+    ClientRequest:
+      type: object
+      required:
+        - name
+        - email
+
+      properties:
+        name:
+          type: string
+          description: Nombre del cliente
+
+        email:
+          type: string
+          description: Correo electrónico del cliente
+
+    RentalRequest:
+      type: object
+      required:
+        - clientId
+        - equipmentId
+        - startDate
+        - endDate
+
+      properties:
+        clientId: 
+          type: integer
+          description: ID del cliente que realiza el arriendo
+
+        equipmentId:
+          type: integer
+          description: ID del equipo que se va a arrendar
+
+        startDate:
+          type: string
+          format: date-time
+          description: Fecha de inicio del arriendo
+
+        endDate:
+          type: string
+          format: date-time
+          description: Fecha de finalización del arriendo
+        
+    RentalResponse:
+      type: object
+
+      properties:
+        id:
+          type: integer
+          description: ID del arriendo
+
+        clientId:
+          type: integer
+          description: ID del cliente que realiza el arriendo
+
+        equipmentId:
+          type: integer
+          description: ID del equipo que se va a arrendar
+
+        startDate:
+          type: string
+          format: date-time
+          description: Fecha de inicio del arriendo
+
+        endDate:
+          type: string
+          format: date-time
+          description: Fecha de finalización del arriendo
+
+        status:
+          type: string
+          description: Estado del arriendo (activo, finalizado, cancelado)
+
+    BadRequestError:
+      type: object
+      required:
+        - code
+        - message
+
+      properties:
+        code:
+          type: string
+          description: Código de error indicando que la solicitud es incorrecta
+
+        message:
+          type: string
+          description: Mensaje de error indicando que la solicitud es incorrecta
+
+    NotAuthorizedError:
+      type: object
+      required:
+        - code
+        - message
+
+      properties:
+        code:
+          type: string
+          description: Código de error indicando que no está autorizado
+
+        message:
+          type: string
+          description: Mensaje de error indicando que no está autorizado
+
+    NotFoundError:
+      type: object
+      required:
+        - code
+        - message
+
+      properties:
+        code:
+          type: string
+          description: Código de error indicando que el recurso no fue encontrado
+
+        message:
+          type: string
+          description: Mensaje de error indicando que el recurso no fue encontrado
+
+    ServiceUnavailableError:
+      type: object
+      required:
+        - code
+        - message
+
+      properties:
+        code:
+          type: string
+          description: Código de error indicando que el servicio no está disponible
+
+        message:
+          type: string
+          description: Mensaje de error indicando que el servicio no está disponible
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
