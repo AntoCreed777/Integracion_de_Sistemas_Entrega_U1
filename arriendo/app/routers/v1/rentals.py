@@ -1,3 +1,4 @@
+import json
 from fastapi import APIRouter, HTTPException, Depends, status, Query, Path
 from datetime import datetime, timezone
 from typing import List, Union
@@ -5,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.bd_models import Client, Rental
+from app.redis import redis_client
 
 from app.models import (
     RentalRequest,
@@ -61,6 +63,9 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db)) -> Re
     db.add(db_rental)
     db.commit()
     db.refresh(db_rental)
+
+    for key in redis_client.scan_iter("rentals:list:*"):
+        redis_client.delete(key)
     
     return build_rental_response(db_rental)
 
@@ -79,9 +84,15 @@ def get_all_rentals(
     offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
     db: Session = Depends(get_db)
 ) -> List[RentalResponse]:
-    rentals = db.query(Rental).offset(offset).limit(limit).all()
-    return [build_rental_response(r) for r in rentals]
+    cache_key = f"rentals:list:{limit}:{offset}"
+    cached = redis_client.get(cache_key)
+    if cached:
+        return [RentalResponse.model_validate(r) for r in json.loads(cached)]
 
+    rentals = db.query(Rental).offset(offset).limit(limit).all()
+    response = [build_rental_response(r) for r in rentals]
+    redis_client.setex(cache_key, 60, json.dumps([r.model_dump(mode="json") for r in response]))
+    return response
 
 @router.get(
     '/{rentalId}',
@@ -97,14 +108,19 @@ def get_rental_by_id(
     rentalId: int = Path(..., ge=1, description="ID del arriendo"),
     db: Session = Depends(get_db)
 ) -> RentalResponse:
+    cache_key = f"rental:{rentalId}"
+    cached = redis_client.get(cache_key)
+    if cached:
+        return RentalResponse.model_validate(json.loads(cached))
     rental = db.query(Rental).filter(Rental.id == rentalId).first()
     if not rental:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "RENTAL_NOT_FOUND", "message": f"Arriendo {rentalId} no encontrado."}
         )
-    return build_rental_response(rental)
-
+    response = build_rental_response(rental)
+    redis_client.setex(cache_key, 60, json.dumps(response.model_dump(mode="json")))
+    return response
 
 @router.post(
     '/{rentalId}/cancel',
@@ -143,6 +159,11 @@ def cancel_rental(
     rental.status = "CANCELLED"
     db.commit()
     db.refresh(rental)
+
+    redis_client.delete(f"rental:{rentalId}")
+    for key in redis_client.scan_iter("rentals:list:*"):
+        redis_client.delete(key)
+
     return build_rental_response(rental)
 
 
@@ -183,6 +204,11 @@ def return_rental(
     rental.status = "COMPLETED"
     db.commit()
     db.refresh(rental)
+    
+    redis_client.delete(f"rental:{rentalId}")
+    for key in redis_client.scan_iter("rentals:list:*"):
+        redis_client.delete(key)
+
     return build_rental_response(rental)
 
 def build_rental_response(rental: Rental) -> RentalResponse:
