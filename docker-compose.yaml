@@ -1,0 +1,37 @@
+services:
+  db-rentals:
+    image: postgres:15-alpine
+    container_name: db-rentals
+    restart: always
+    environment:
+      POSTGRES_USER: arriendos_user
+      POSTGRES_PASSWORD: arriendos_password
+      POSTGRES_DB: rentals_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - rentals_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arriendos_user -d rentals_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-rentals:
+    build:
+      context: ./Arriendo
+      dockerfile: Dockerfile
+    container_name: api-rentals
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # Debe coincidir exactamente con el usuario, contraseña, host y base de datos de arriba
+      DATABASE_URL: postgresql://arriendos_user:arriendos_password@db-rentals:5432/rentals_db
+    depends_on:
+      db-rentals:
+        condition: service_healthy
+
+volumes:
+  # Volumen para persistir los datos de la base de datos si bajas los contenedores
+  rentals_pg_data:
