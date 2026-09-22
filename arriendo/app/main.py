@@ -4,8 +4,9 @@
 
 
 from fastapi import FastAPI, Request, status
-from fastapi.exceptions import RequestValidationError, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.routers.v1 import rentals, clients
 from app.database import engine, Base
@@ -35,13 +36,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"code": "BAD_REQUEST", "message": f"Error en '{loc}': {first_err.get('msg')}"}
     )
 
-@app.exception_handler(HTTPException)
-async def custom_http_exception_handler(request: Request, exc: HTTPException):
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
     if isinstance(exc.detail, dict) and "code" in exc.detail:
         body = exc.detail
     else:
         body = {"code": "ERROR", "message": str(exc.detail)}
-    return JSONResponse(status_code=exc.status_code, content=body)
+    return JSONResponse(status_code=exc.status_code, content=body, headers=getattr(exc, "headers", None))
 
 
 # --- Routers ---
