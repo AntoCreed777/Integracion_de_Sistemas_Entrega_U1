@@ -19,7 +19,7 @@ services:
 
   arriendos-api:
     build:
-      context: ./Arriendo
+      context: ./arriendo
       dockerfile: Dockerfile
     container_name: arriendos-api
     restart: always
