@@ -27,6 +27,28 @@ app = FastAPI(
     ],
 )
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    first_err = exc.errors()[0]
+    loc = ".".join([str(k) for k in first_err.get("loc", []) if k != "body"])
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"code": "BAD_REQUEST", "message": f"Error en '{loc}': {first_err.get('msg')}"}
+    )
+
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    if isinstance(exc.detail, dict) and "code" in exc.detail:
+        body = exc.detail
+    else:
+        body = {"code": "ERROR", "message": str(exc.detail)}
+    return JSONResponse(status_code=exc.status_code, content=body)
+
+
+# --- Routers ---
+app.include_router(clients.router)
+app.include_router(rentals.router)
+
 @app.get('/health', response_model=HealthResponse, tags=['System'])
 def health_check() -> HealthResponse:
 

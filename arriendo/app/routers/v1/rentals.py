@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends, status, Query, Path
 from datetime import datetime, timezone
 from typing import List, Union
 from sqlalchemy.orm import Session
-from .database import get_db
-from .bd_models import Client, Rental
+from database import get_db
+from bd_models import Client, Rental
 from app.models import (
     RentalRequest,
     RentalResponse,
