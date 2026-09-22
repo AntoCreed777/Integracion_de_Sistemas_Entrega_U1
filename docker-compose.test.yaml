@@ -1,0 +1,42 @@
+services:
+  equipos-api:
+    build:
+      context: ./Equipos
+      dockerfile: Dockerfile
+      target: test
+
+    container_name: equipos-api
+
+    env_file:
+      - .env
+
+    ports:
+      - "${EQUIPOS_GRPC_PORT}:50051"
+
+    depends_on:
+      equipos-db:
+        condition: service_healthy
+
+  equipos-db:
+    image: postgres:16-alpine
+
+    container_name: equipos-db
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "${EQUIPOS_DB_PORT}:5432"
+
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5

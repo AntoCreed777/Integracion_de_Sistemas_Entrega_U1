@@ -7,11 +7,10 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.responses import JSONResponse
 
-from routers.v1 import rentals
-from database import engine, Base
-from routers.v1 import clients
+from app.routers.v1 import rentals, clients
+from app.database import engine, Base
 
-from models import HealthResponse
+from app.models import HealthResponse
 
 Base.metadata.create_all(bind=engine)
     

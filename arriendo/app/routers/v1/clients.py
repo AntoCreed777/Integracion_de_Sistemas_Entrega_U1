@@ -2,8 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from datetime import datetime, timezone
 from typing import List, Optional, Union
 from sqlalchemy.orm import Session
+
 from app.database import get_db
-from app.bd_models import Client, Rental
+from app.bd_models import Client
+
 from app.models import (
     ClientRequest,
     ClientResponse,
@@ -15,7 +17,7 @@ from app.models import (
     NotFoundError,
 )
 
-router = APIRouter(prefix='/v1/clientes', tags=['Clientes'])
+router = APIRouter(prefix='/v1/clients', tags=['Clients'])
 
 @router.post(
     '',
