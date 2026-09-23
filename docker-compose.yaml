@@ -21,6 +21,7 @@ services:
     build:
       context: ./arriendo
       dockerfile: Dockerfile
+      target: base
     container_name: arriendos-api
     restart: always
     ports:
