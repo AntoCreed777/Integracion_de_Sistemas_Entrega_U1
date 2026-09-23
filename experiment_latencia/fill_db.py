@@ -1,34 +1,36 @@
 import random
 import string
 
-from Equipos.app.database import SessionLocal
-from Equipos.app.models.equipo import Equipo
+from arriendo.app.bd_models import Client, Rental
+from arriendo.app.database import SessionLocal
 
 
-def fill_database(cantidad_equipos: int):
+def fill_database(cantidad_arriendos: int):
     """
-    Llena la base de datos con una cantidad específica de equipos de prueba.
+    Llena la base de datos con una cantidad específica de arriendos de prueba y un solo cliente.
 
-    Cada equipo tendra valores aleatorios para sus atributos, y se asegura de que la cantidad de unidades disponibles no exceda la cantidad total.
+    Cada arriendo tendra valores aleatorios para sus atributos.
     """
     session = SessionLocal()
     cadena_aleatoria = lambda longitud: "".join(
         random.choices(string.ascii_letters + string.digits, k=longitud)
     )
 
-    for _ in range(cantidad_equipos):
-        nombre = f"{cadena_aleatoria(10)}"
-        descripcion = f"{cadena_aleatoria(10)}"
-        cantidad_total = random.randint(1, 100)  # Cantidad total entre 1 y 100
-        unidades_disponibles = random.randint(
-            0, cantidad_total
-        )  # Unidades disponibles entre 0 y cantidad_total
+    nuevo_cliente = Client(
+        name=f"{cadena_aleatoria(10)}",
+        email=f"{cadena_aleatoria(5)}@example.com",
+    )
+    session.add(nuevo_cliente)
+    session.commit()
+    session.refresh(nuevo_cliente)
 
-        nuevo_equipo = Equipo(
-            nombre=nombre,
-            descripcion=descripcion,
-            cantidad_total=cantidad_total,
-            unidades_disponibles=unidades_disponibles,
+    for _ in range(cantidad_arriendos):
+        nuevo_equipo = Rental(
+            client_id=nuevo_cliente.id,
+            equipment_id=random.randint(1, 1000),
+            start_date=f"2023-01-{random.randint(1, 28)}",
+            end_date=f"2023-02-{random.randint(1, 28)}",
+            status=random.choice(["ACTIVE", "COMPLETED", "CANCELLED"]),
         )
 
         session.add(nuevo_equipo)

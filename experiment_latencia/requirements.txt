@@ -1,4 +1,4 @@
--r ../Equipos/requirements.txt
+-r ../arriendo/requirements.txt
 httpx>=0.27
 numpy>=1.26
 scipy>=1.12

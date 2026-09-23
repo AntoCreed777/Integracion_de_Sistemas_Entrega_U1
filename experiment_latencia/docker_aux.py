@@ -58,6 +58,33 @@ def detener_docker_compose(delete_volumes: bool = False):
     subprocess.run(command, check=True)
 
 
+def docker_services_healthy() -> bool:
+    result = subprocess.run(
+        [
+            "docker",
+            "ps",
+            "--format",
+            "{{.Names}}|{{.Status}}",
+        ],
+        cwd=BASE_DIR,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    all_healthy = True
+
+    for line in result.stdout.strip().splitlines():
+        name, status = line.split("|", 1)
+
+        print(f"{name}: {status}")
+
+        if "(healthy)" not in status:
+            all_healthy = False
+
+    return all_healthy
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Levantar servicios con Docker Compose"
