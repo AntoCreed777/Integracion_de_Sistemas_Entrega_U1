@@ -8,6 +8,7 @@ from app.database import get_db
 from app.bd_models import Client, Rental
 from app.redis import redis_client
 from app.grpc_client import reservar_unidad, liberar_unidad
+from app.auth import client_validation, admin_validation
 
 from app.models import (
     RentalRequest,
@@ -37,7 +38,7 @@ router = APIRouter(prefix='/v1/rentals', tags=['Rentals'])
         '504': {'model': GatewayTimeoutError},
     }
 )
-def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db)) -> RentalResponse:
+def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db), admin_auth: dict = Depends(admin_validation)) -> RentalResponse:
     # 1. Verificar que el cliente exista
     client = db.query(Client).filter(Client.id == rental_in.clientId).first()
     if not client:
@@ -92,7 +93,8 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db)) -> Re
 def get_all_rentals(
     limit: int = Query(20, ge=1, le=100, description="Límite de resultados"),
     offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    client_auth: dict = Depends(client_validation)
 ) -> List[RentalResponse]:
     cache_key = f"rentals:list:{limit}:{offset}"
     cached = redis_client.get(cache_key)
@@ -116,7 +118,8 @@ def get_all_rentals(
 )
 def get_rental_by_id(
     rentalId: int = Path(..., ge=1, description="ID del arriendo"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    client_auth: dict = Depends(client_validation)
 ) -> RentalResponse:
     cache_key = f"rental:{rentalId}"
     cached = redis_client.get(cache_key)
@@ -148,7 +151,8 @@ def get_rental_by_id(
 )
 def cancel_rental(
     rentalId: int = Path(..., ge=1),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin_auth: dict = Depends(admin_validation)
 ) -> RentalResponse:
     rental = db.query(Rental).filter(Rental.id == rentalId).first()
     if not rental:
@@ -192,7 +196,8 @@ def cancel_rental(
 )
 def return_rental(
     rentalId: int = Path(..., ge=1),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin_auth: dict = Depends(admin_validation)
 ) -> RentalResponse:
     rental = db.query(Rental).filter(Rental.id == rentalId).first()
     if not rental:

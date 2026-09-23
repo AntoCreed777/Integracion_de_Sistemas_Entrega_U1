@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.bd_models import Client
+from app.auth import client_validation, admin_validation
 
 from app.models import (
     ClientRequest,
@@ -32,7 +33,7 @@ router = APIRouter(prefix='/v1/clients', tags=['Clients'])
     },
     tags=['Clients'],
 )
-def create_client(client_in: ClientRequest, db: Session = Depends(get_db)) -> ClientResponse:
+def create_client(client_in: ClientRequest, db: Session = Depends(get_db), admin_auth: dict = Depends(admin_validation)) -> ClientResponse:
     db_client = Client(name=client_in.name, email=client_in.email)
     db.add(db_client)
     try:
@@ -60,7 +61,7 @@ def create_client(client_in: ClientRequest, db: Session = Depends(get_db)) -> Cl
     },
     tags=['Clients'],
 )
-def get_all_clients(limit: int = 20, offset: int = 0, db: Session = Depends(get_db)) -> List[ClientResponse]:
+def get_all_clients(limit: int = 20, offset: int = 0, db: Session = Depends(get_db), client_auth: dict = Depends(client_validation)) -> List[ClientResponse]:
     clients = db.query(Client).options(joinedload(Client.rentals)).order_by(Client.id).offset(offset).limit(limit).all()
     return [build_client_response(c) for c in clients]
 
@@ -76,7 +77,7 @@ def get_all_clients(limit: int = 20, offset: int = 0, db: Session = Depends(get_
     },
     tags=['Clients'],
 )
-def get_client_by_id(clientId: int, db: Session = Depends(get_db)) -> ClientResponse:
+def get_client_by_id(clientId: int, db: Session = Depends(get_db), client_auth: dict = Depends(client_validation)) -> ClientResponse:
     client = db.query(Client).filter(Client.id == clientId).first()
     if not client:
         raise HTTPException(
