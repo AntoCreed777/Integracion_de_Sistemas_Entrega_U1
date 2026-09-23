@@ -62,7 +62,7 @@ def get_all_clients(limit: int = 20, offset: int = 0, db: Session = Depends(get_
 
 
 @router.get(
-    '{clientId}',
+    '/{clientId}',
     response_model=ClientResponse,
     responses={
         '400': {'model': BadRequestError},
@@ -91,6 +91,10 @@ def build_client_response(client: Client) -> ClientResponse:
         id=client.id,
         name=client.name,
         email=client.email,
-        createdAt=client.created_at,
+        createdAt=(
+            client.created_at.replace(tzinfo=timezone.utc)
+            if client.created_at.tzinfo is None
+            else client.created_at
+        ),
         rentalHistory=RentalHistory(active=active, completed=completed, cancelled=cancelled)
     )

@@ -186,11 +186,21 @@ def return_rental(
     return build_rental_response(rental)
 
 def build_rental_response(rental: Rental) -> RentalResponse:
+    start_date = (
+        rental.start_date.replace(tzinfo=timezone.utc)
+        if rental.start_date.tzinfo is None
+        else rental.start_date
+    )
+    end_date = (
+        rental.end_date.replace(tzinfo=timezone.utc)
+        if rental.end_date.tzinfo is None
+        else rental.end_date
+    )
     return RentalResponse(
         id=rental.id,
         clientId=rental.client_id,
         equipmentId=rental.equipment_id,
-        startDate=rental.start_date,
-        endDate=rental.end_date,
+        startDate=start_date,
+        endDate=end_date,
         status=rental.status
     )
