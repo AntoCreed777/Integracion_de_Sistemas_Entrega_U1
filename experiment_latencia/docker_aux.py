@@ -10,6 +10,10 @@ ENV_FILE = BASE_DIR / ".env"
 
 def ensure_env_variables():
     if not ENV_FILE.exists():
+        if not ENV_EXAMPLE_FILE.exists():
+            raise FileNotFoundError(
+                f"El archivo de ejemplo de variables de entorno no existe: {ENV_EXAMPLE_FILE}"
+            )
         subprocess.run(["cp", str(ENV_EXAMPLE_FILE), str(ENV_FILE)], check=True)
 
 
