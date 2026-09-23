@@ -155,7 +155,10 @@ async def prepare_cache_hit():
         limits=limits,
         timeout=HTTP_TIMEOUT,
     ) as client:
-        response = await client.get(url)
+        response = await client.get(
+            url,
+            headers={"API-Key": "apikey_admin"}
+        )
 
         print(
             "[CACHE] status=%s cache=%s"

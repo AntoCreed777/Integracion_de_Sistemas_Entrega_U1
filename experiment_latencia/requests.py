@@ -40,7 +40,11 @@ async def fetch(
     start = time.perf_counter()
 
     try:
-        response = await client.get(url)
+        response = await client.get(
+            url,
+            headers={"API-Key": "apikey_admin"}
+        )
+
         elapsed = (time.perf_counter() - start) * 1000
 
         return RequestResult(
