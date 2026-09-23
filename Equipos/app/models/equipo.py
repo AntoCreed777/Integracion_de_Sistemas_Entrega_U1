@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from Equipos.app.models.base import Base
+from app.models.base import Base
 from sqlalchemy import Boolean, CheckConstraint, DateTime, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
