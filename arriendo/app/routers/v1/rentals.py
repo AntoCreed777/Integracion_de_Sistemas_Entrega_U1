@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.bd_models import Client, Rental
+from app.grpc_client import reservar_unidad, liberar_unidad
 
 from app.models import (
     RentalRequest,
@@ -35,7 +36,13 @@ router = APIRouter(prefix='/v1/rentals', tags=['Rentals'])
     }
 )
 def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db)) -> RentalResponse:
-    # 1. Verificar que el cliente exista
+    # 1. Validar fechas
+    if rental_in.endDate <= rental_in.startDate:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "BAD_REQUEST", "message": "endDate debe ser posterior a startDate."},
+        )
+    # 2. Verificar que el cliente exista
     client = db.query(Client).filter(Client.id == rental_in.clientId).first()
     if not client:
         raise HTTPException(
@@ -43,11 +50,7 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db)) -> Re
             detail={"code": "CLIENT_NOT_FOUND", "message": f"El cliente {rental_in.clientId} no existe."}
         )
 
-    # 2. TODO (gRPC): Integración con el sistema de Equipos
-    # - Llamar a Equipos para verificar stock de `rental_in.equipmentId`.
-    # - Si no hay stock -> raise HTTPException(409, detail=...)
-    # - Si gRPC falla -> raise HTTPException(503, detail=...) o 504.
-    # - Si hay éxito, el servicio gRPC debe descontar/reservar la unidad.
+    resevar_unidad(rental_in.equipmentId)
 
     # 3. Guardar en la base de datos local
     db_rental = Rental(
@@ -79,7 +82,7 @@ def get_all_rentals(
     offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
     db: Session = Depends(get_db)
 ) -> List[RentalResponse]:
-    rentals = db.query(Rental).offset(offset).limit(limit).all()
+    rentals = db.query(Rental).order_by(Rental.id).offset(offset).limit(limit).all()
     return [build_rental_response(r) for r in rentals]
 
 
@@ -137,8 +140,7 @@ def cancel_rental(
             detail={"code": "INVALID_STATE_TRANSITION", "message": f"No se puede cancelar un arriendo que está en estado {rental.status}."}
         )
 
-    # TODO (gRPC): Integración con el sistema de Equipos
-    # - Llamar a gRPC para liberar la unidad que había sido reservada.
+    liberar_unidad(rental.equipment_id)
 
     rental.status = "CANCELLED"
     db.commit()
@@ -177,8 +179,7 @@ def return_rental(
             detail={"code": "INVALID_STATE_TRANSITION", "message": f"No se puede retornar un arriendo que está en estado {rental.status}."}
         )
 
-    # TODO (gRPC): Integración con el sistema de Equipos
-    # - Llamar a gRPC para informar que la unidad ha sido devuelta físicamente.
+    liberar_unidad(rental.equipment_id)
 
     rental.status = "COMPLETED"
     db.commit()

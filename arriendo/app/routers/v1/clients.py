@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Query, Path
 from datetime import datetime, timezone
-from typing import List, Optional, Union
-from sqlalchemy.orm import Session
+from typing import List
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.bd_models import Client
@@ -32,16 +33,19 @@ router = APIRouter(prefix='/v1/clients', tags=['Clients'])
     tags=['Clients'],
 )
 def create_client(client_in: ClientRequest, db: Session = Depends(get_db)) -> ClientResponse:
-    existing = db.query(Client).filter(Client.email == client_in.email).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "EMAIL_ALREADY_EXISTS", "message": f"El correo '{client_in.email}' ya está registrado."}
-        )
-
     db_client = Client(name=client_in.name, email=client_in.email)
     db.add(db_client)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "EMAIL_ALREADY_EXISTS",
+                "message": f"El correo '{client_in.email}' ya está registrado.",
+            },
+        )
     db.refresh(db_client)
     return build_client_response(db_client)
 
@@ -57,12 +61,12 @@ def create_client(client_in: ClientRequest, db: Session = Depends(get_db)) -> Cl
     tags=['Clients'],
 )
 def get_all_clients(limit: int = 20, offset: int = 0, db: Session = Depends(get_db)) -> List[ClientResponse]:
-    clients = db.query(Client).offset(offset).limit(limit).all()
+    clients = db.query(Client).options(joinedload(Client.rentals)).order_by(Client.id).offset(offset).limit(limit).all()
     return [build_client_response(c) for c in clients]
 
 
 @router.get(
-    '{clientId}',
+    '/{clientId}',
     response_model=ClientResponse,
     responses={
         '400': {'model': BadRequestError},
