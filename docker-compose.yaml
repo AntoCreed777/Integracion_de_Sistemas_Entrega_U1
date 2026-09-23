@@ -28,6 +28,7 @@ services:
     environment:
       DATABASE_URL: postgresql://arriendos_user:arriendos_password@arriendo-db:5432/arriendo-db
       REDIS_HOST: arriendos-redis
+      ACTIVATE_REDIS: ${ACTIVATE_REDIS}
     depends_on:
       arriendo-db:
         condition: service_healthy
