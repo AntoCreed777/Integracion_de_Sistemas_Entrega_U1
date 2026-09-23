@@ -7,7 +7,7 @@ API_KEYS = {
     "apikey_cliente": {"client": "Dashboard", "role": "readonly"}
 }
 
-api_key_header = APIKeyHeader(name="X-API-Key")
+api_key_header = APIKeyHeader(name="API-Key")
 
 def client_validation(key: str = Security(api_key_header)):
     client_data = API_KEYS.get(key)
