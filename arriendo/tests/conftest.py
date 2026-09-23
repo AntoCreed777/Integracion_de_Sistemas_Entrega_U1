@@ -49,6 +49,22 @@ def client(db_session):
     app.dependency_overrides.clear()
 
 
+@pytest.fixture(autouse=True)
+def grpc_equipment_service(monkeypatch):
+    from app.routers.v1.rentals import rentals_without_redis
+
+    monkeypatch.setattr(
+        rentals_without_redis,
+        "reservar_unidad",
+        lambda equipment_id: None,
+    )
+    monkeypatch.setattr(
+        rentals_without_redis,
+        "liberar_unidad",
+        lambda equipment_id: None,
+    )
+
+
 @pytest.fixture()
 def crear_cliente(db_session):
     def _crear_cliente(

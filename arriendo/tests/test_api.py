@@ -63,13 +63,16 @@ class TestClients:
 
 class TestRentals:
     def test_crear_arriendo(self, client):
-        client.post("/v1/clients", json=CLIENTE)
+        created_client = client.post("/v1/clients", json=CLIENTE).json()
 
-        response = client.post("/v1/rentals", json=ARRIENDO)
+        response = client.post(
+            "/v1/rentals",
+            json={**ARRIENDO, "clientId": created_client["id"]},
+        )
 
         assert response.status_code == 201
         body = response.json()
-        assert body["clientId"] == 1
+        assert body["clientId"] == created_client["id"]
         assert body["equipmentId"] == ARRIENDO["equipmentId"]
         assert body["status"] == "ACTIVE"
 
@@ -89,8 +92,11 @@ class TestRentals:
         assert response.json()["code"] == "BAD_REQUEST"
 
     def test_listar_y_obtener_arriendo(self, client):
-        client.post("/v1/clients", json=CLIENTE)
-        created = client.post("/v1/rentals", json=ARRIENDO).json()
+        created_client = client.post("/v1/clients", json=CLIENTE).json()
+        created = client.post(
+            "/v1/rentals",
+            json={**ARRIENDO, "clientId": created_client["id"]},
+        ).json()
 
         listed = client.get("/v1/rentals")
         retrieved = client.get(f"/v1/rentals/{created['id']}")
@@ -107,8 +113,11 @@ class TestRentals:
         assert response.json()["code"] == "RENTAL_NOT_FOUND"
 
     def test_cancelar_arriendo(self, client):
-        client.post("/v1/clients", json=CLIENTE)
-        created = client.post("/v1/rentals", json=ARRIENDO).json()
+        created_client = client.post("/v1/clients", json=CLIENTE).json()
+        created = client.post(
+            "/v1/rentals",
+            json={**ARRIENDO, "clientId": created_client["id"]},
+        ).json()
 
         response = client.post(f"/v1/rentals/{created['id']}/cancel")
 
@@ -116,8 +125,11 @@ class TestRentals:
         assert response.json()["status"] == "CANCELLED"
 
     def test_retorno_completa_arriendo(self, client):
-        client.post("/v1/clients", json=CLIENTE)
-        created = client.post("/v1/rentals", json=ARRIENDO).json()
+        created_client = client.post("/v1/clients", json=CLIENTE).json()
+        created = client.post(
+            "/v1/rentals",
+            json={**ARRIENDO, "clientId": created_client["id"]},
+        ).json()
 
         response = client.post(f"/v1/rentals/{created['id']}/return")
 
@@ -125,8 +137,11 @@ class TestRentals:
         assert response.json()["status"] == "COMPLETED"
 
     def test_no_se_puede_cancelar_arriendo_cancelado(self, client):
-        client.post("/v1/clients", json=CLIENTE)
-        created = client.post("/v1/rentals", json=ARRIENDO).json()
+        created_client = client.post("/v1/clients", json=CLIENTE).json()
+        created = client.post(
+            "/v1/rentals",
+            json={**ARRIENDO, "clientId": created_client["id"]},
+        ).json()
         client.post(f"/v1/rentals/{created['id']}/cancel")
 
         response = client.post(f"/v1/rentals/{created['id']}/cancel")
@@ -135,11 +150,14 @@ class TestRentals:
         assert response.json()["code"] == "INVALID_STATE_TRANSITION"
 
     def test_historial_cliente_se_actualiza(self, client):
-        client.post("/v1/clients", json=CLIENTE)
-        created = client.post("/v1/rentals", json=ARRIENDO).json()
+        created_client = client.post("/v1/clients", json=CLIENTE).json()
+        created = client.post(
+            "/v1/rentals",
+            json={**ARRIENDO, "clientId": created_client["id"]},
+        ).json()
         client.post(f"/v1/rentals/{created['id']}/return")
 
-        response = client.get("/v1/clients/1")
+        response = client.get(f"/v1/clients/{created_client['id']}")
 
         assert response.status_code == 200
         assert response.json()["rentalHistory"] == {
