@@ -38,16 +38,36 @@ def db_session():
         Base.metadata.drop_all(bind=engine)
 
 
-@pytest.fixture()
-def client(db_session):
+def _api_client(db_session, api_key):
     def override_get_db():
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
-        test_client.headers.update({"API-Key": "apikey_admin"})
+        if api_key is not None:
+            test_client.headers.update({"API-Key": api_key})
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def admin_client(db_session):
+    yield from _api_client(db_session, "apikey_admin")
+
+
+@pytest.fixture()
+def cliente_client(db_session):
+    yield from _api_client(db_session, "apikey_cliente")
+
+
+@pytest.fixture()
+def client(admin_client):
+    return admin_client
+
+
+@pytest.fixture()
+def unauthenticated_client(db_session):
+    yield from _api_client(db_session, None)
 
 
 @pytest.fixture(autouse=True)

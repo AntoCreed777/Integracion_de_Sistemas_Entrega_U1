@@ -16,6 +16,23 @@ class TestHealth:
 
 
 class TestClients:
+    def test_admin_puede_crear_cliente(self, admin_client):
+        response = admin_client.post("/v1/clients", json=CLIENTE)
+
+        assert response.status_code == 201
+
+    def test_crear_cliente_sin_autenticacion(self, unauthenticated_client):
+        response = unauthenticated_client.post("/v1/clients", json=CLIENTE)
+
+        assert response.status_code == 401
+        assert response.json()["code"] == "UNAUTHORIZED"
+
+    def test_cliente_no_puede_crear_cliente(self, cliente_client):
+        response = cliente_client.post("/v1/clients", json=CLIENTE)
+
+        assert response.status_code == 403
+        assert response.json()["code"] == "FORBIDDEN"
+
     def test_crear_cliente(self, client):
         response = client.post("/v1/clients", json=CLIENTE)
 
@@ -62,6 +79,33 @@ class TestClients:
 
 
 class TestRentals:
+    def test_cliente_no_puede_crear_arriendo(self, admin_client, cliente_client):
+        created_client = admin_client.post("/v1/clients", json=CLIENTE).json()
+
+        response = cliente_client.post(
+            "/v1/rentals",
+            json={**ARRIENDO, "clientId": created_client["id"]},
+        )
+
+        assert response.status_code == 403
+        assert response.json()["code"] == "FORBIDDEN"
+
+    def test_cliente_no_puede_cancelar_arriendo(
+        self,
+        admin_client,
+        cliente_client,
+    ):
+        created_client = admin_client.post("/v1/clients", json=CLIENTE).json()
+        created = admin_client.post(
+            "/v1/rentals",
+            json={**ARRIENDO, "clientId": created_client["id"]},
+        ).json()
+
+        response = cliente_client.post(f"/v1/rentals/{created['id']}/cancel")
+
+        assert response.status_code == 403
+        assert response.json()["code"] == "FORBIDDEN"
+
     def test_crear_arriendo(self, client):
         created_client = client.post("/v1/clients", json=CLIENTE).json()
 

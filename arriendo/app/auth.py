@@ -1,5 +1,6 @@
 from fastapi import Security, HTTPException, status, Depends
 from fastapi.security.api_key import APIKeyHeader
+from typing import Optional
 
 # Diccionario que actúa como tu "base de datos" de API Keys
 API_KEYS = {
@@ -7,9 +8,9 @@ API_KEYS = {
     "apikey_cliente": {"client": "Dashboard", "role": "readonly"}
 }
 
-api_key_header = APIKeyHeader(name="API-Key")
+api_key_header = APIKeyHeader(name="API-Key", auto_error=False)
 
-def client_validation(key: str = Security(api_key_header)):
+def client_validation(key: Optional[str] = Security(api_key_header)):
     client_data = API_KEYS.get(key)
     if not client_data:
         raise HTTPException(
