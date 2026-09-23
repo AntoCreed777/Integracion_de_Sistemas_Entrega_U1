@@ -58,7 +58,20 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db)) -> Re
     )
     
     db.add(db_rental)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        try:
+            liberar_unidad(rental_in.equipmentId)
+        except HTTPException:
+            # Si la compensación también falla, queda una unidad reservada
+            # sin arriendo asociado. Es un costo aceptado que se documenta
+            # en el ADR de resiliencia (D4): no hay forma de garantizar
+            # atomicidad entre dos servicios sin una transacción
+            # distribuida, que está fuera del alcance de este encargo.
+            pass
+        raise
     db.refresh(db_rental)
 
     for key in redis_client.scan_iter("rentals:list:*"):

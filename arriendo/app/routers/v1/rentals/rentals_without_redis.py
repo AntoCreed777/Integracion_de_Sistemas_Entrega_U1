@@ -62,7 +62,15 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db)) -> Re
     )
     
     db.add(db_rental)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        try:
+            liberar_unidad(rental_in.equipmentId)
+        except HTTPException:
+            pass
+        raise
     db.refresh(db_rental)
     
     return build_rental_response(db_rental)
