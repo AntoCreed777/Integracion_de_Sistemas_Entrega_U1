@@ -99,12 +99,19 @@ def get_all_rentals(
     cache_key = f"rentals:list:{limit}:{offset}"
     cached = redis_client.get(cache_key)
     if cached:
-        return [RentalResponse.model_validate(r) for r in json.loads(cached)]
+        results = [RentalResponse.model_validate(r) for r in json.loads(cached)]
+        for r in results:
+            r.cacheHeader = "HIT"
+        return results
 
     rentals = db.query(Rental).offset(offset).limit(limit).all()
-    response = [build_rental_response(r) for r in rentals]
-    redis_client.setex(cache_key, 60, json.dumps([r.model_dump(mode="json") for r in response]))
-    return response
+    results = [build_rental_response(r) for r in rentals]
+
+    redis_client.setex(cache_key, 60, json.dumps([r.model_dump(mode="json") for r in results]))
+
+    for r in results:
+        r.cacheHeader = "MISS"
+    return results
 
 @router.get(
     '/{rentalId}',
@@ -124,16 +131,19 @@ def get_rental_by_id(
     cache_key = f"rental:{rentalId}"
     cached = redis_client.get(cache_key)
     if cached:
-        return RentalResponse.model_validate(json.loads(cached))
+        result = RentalResponse.model_validate(json.loads(cached))
+        result.cacheHeader = "HIT"
+        return result
     rental = db.query(Rental).filter(Rental.id == rentalId).first()
     if not rental:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "RENTAL_NOT_FOUND", "message": f"Arriendo {rentalId} no encontrado."}
         )
-    response = build_rental_response(rental)
-    redis_client.setex(cache_key, 60, json.dumps(response.model_dump(mode="json")))
-    return response
+    result = build_rental_response(rental)
+    result.cacheHeader = "MISS"
+    redis_client.setex(cache_key, 60, json.dumps(result.model_dump(mode="json")))
+    return result
 
 @router.post(
     '/{rentalId}/cancel',
