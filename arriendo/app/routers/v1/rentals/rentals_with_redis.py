@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.bd_models import Client, Rental
 from app.redis import redis_client
+from app.grpc_client import reservar_unidad, liberar_unidad
 
 from app.models import (
     RentalRequest,
@@ -45,11 +46,7 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db)) -> Re
             detail={"code": "CLIENT_NOT_FOUND", "message": f"El cliente {rental_in.clientId} no existe."}
         )
 
-    # 2. TODO (gRPC): Integración con el sistema de Equipos
-    # - Llamar a Equipos para verificar stock de `rental_in.equipmentId`.
-    # - Si no hay stock -> raise HTTPException(409, detail=...)
-    # - Si gRPC falla -> raise HTTPException(503, detail=...) o 504.
-    # - Si hay éxito, el servicio gRPC debe descontar/reservar la unidad.
+    reservar_unidad(rental_in.equipmentId)
 
     # 3. Guardar en la base de datos local
     db_rental = Rental(
@@ -153,8 +150,7 @@ def cancel_rental(
             detail={"code": "INVALID_STATE_TRANSITION", "message": f"No se puede cancelar un arriendo que está en estado {rental.status}."}
         )
 
-    # TODO (gRPC): Integración con el sistema de Equipos
-    # - Llamar a gRPC para liberar la unidad que había sido reservada.
+    liberar_unidad(rental.equipment_id)
 
     rental.status = "CANCELLED"
     db.commit()
@@ -198,8 +194,7 @@ def return_rental(
             detail={"code": "INVALID_STATE_TRANSITION", "message": f"No se puede retornar un arriendo que está en estado {rental.status}."}
         )
 
-    # TODO (gRPC): Integración con el sistema de Equipos
-    # - Llamar a gRPC para informar que la unidad ha sido devuelta físicamente.
+    liberar_unidad(rental.equipment_id)
 
     rental.status = "COMPLETED"
     db.commit()

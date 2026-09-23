@@ -50,7 +50,7 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db)) -> Re
             detail={"code": "CLIENT_NOT_FOUND", "message": f"El cliente {rental_in.clientId} no existe."}
         )
 
-    resevar_unidad(rental_in.equipmentId)
+    reservar_unidad(rental_in.equipmentId)
 
     # 3. Guardar en la base de datos local
     db_rental = Rental(
