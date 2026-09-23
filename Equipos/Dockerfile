@@ -1,5 +1,5 @@
 # Etapa 1: Base comun y servicio para produccion
-FROM python:3.12-slim as base
+FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -38,7 +38,7 @@ CMD ["python", "-m", "app.main"]
 
 
 # Etapa 2: Servicio para test
-FROM base as test
+FROM base AS test
 
 COPY requirements-dev.txt .
 RUN pip install --no-cache-dir -r requirements-dev.txt

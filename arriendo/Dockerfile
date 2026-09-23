@@ -1,4 +1,4 @@
-FROM python:3.12-slim as base
+FROM python:3.12-slim AS base
 
 WORKDIR /app
 
@@ -31,7 +31,7 @@ EXPOSE 8080
 # Comando para levantar FastAPI
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
 
-FROM base as test
+FROM base AS test
 
 COPY requirements-dev.txt .
 RUN pip install --no-cache-dir -r requirements-dev.txt
