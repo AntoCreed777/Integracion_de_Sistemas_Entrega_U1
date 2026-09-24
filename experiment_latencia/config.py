@@ -14,7 +14,7 @@ WARMUP_REQUESTS = int(os.getenv("EXPERIMENT_WARMUP_REQUESTS", "100"))
 
 # Header que debe enviar la API para indicar HIT/MISS.
 # Ejemplo: X-Cache: HIT / X-Cache: MISS
-CACHE_HEADER = os.getenv("EXPERIMENT_CACHE_HEADER", "X-Cache")
+CACHE_HEADER = "cache_status"
 
 # Para escenarios C/D, si tu API permite seleccionar el recurso mediante
 # query parameter, puedes usar por ejemplo:
