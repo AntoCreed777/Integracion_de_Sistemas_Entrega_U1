@@ -7,9 +7,9 @@ RAW_DIR = RESULTS_DIR / "raw"
 BASE_URL = os.getenv("EXPERIMENT_BASE_URL", "http://localhost:8080")
 ENDPOINT = os.getenv("EXPERIMENT_ENDPOINT", "/v1/rentals")
 
-REQUESTS = int(os.getenv("EXPERIMENT_REQUESTS", "1000"))
-WORKERS = int(os.getenv("EXPERIMENT_WORKERS", "10"))
-REPETITIONS = int(os.getenv("EXPERIMENT_REPETITIONS", "5"))
+REQUESTS = int(os.getenv("EXPERIMENT_REQUESTS", "10000"))
+WORKERS = int(os.getenv("EXPERIMENT_WORKERS", "15"))
+REPETITIONS = int(os.getenv("EXPERIMENT_REPETITIONS", "10"))
 WARMUP_REQUESTS = int(os.getenv("EXPERIMENT_WARMUP_REQUESTS", "100"))
 
 # Header que debe enviar la API para indicar HIT/MISS.
