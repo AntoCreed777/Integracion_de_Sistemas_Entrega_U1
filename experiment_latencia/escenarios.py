@@ -94,17 +94,9 @@ async def execute_scenario(scenario: Scenario):
     # Esperar a que la aplicación esté disponible.
     await wait_for_api()
 
-    if scenario == Scenario.B:
-        # Para B queremos que el recurso ya esté en Redis.
-        await prepare_cache_hit()
-
     for repetition in range(1, REPETITIONS + 1):
         print()
         print(f"[{scenario.name}] Repetición " f"{repetition}/{REPETITIONS}")
-
-        if scenario == Scenario.B:
-            # Garantiza que el recurso siga caliente antes de la medición.
-            await prepare_cache_hit()
 
         # Warm-up separado de la medición.
         await warmup(build_url(FIRST_ID))
