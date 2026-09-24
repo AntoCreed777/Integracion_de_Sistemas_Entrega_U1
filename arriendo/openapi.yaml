@@ -18,6 +18,7 @@ security:
 paths:
   /health:
     get:
+      security: []
       tags:
       - Health
       summary: Estado del servicio
@@ -37,7 +38,6 @@ paths:
       summary: Crear un nuevo cliente
       description: Registra un nuevo cliente en el sistema de arriendos. El email debe ser único.
       operationId: createClient
-      security: []
       requestBody:
         required: true
         content:
@@ -87,7 +87,6 @@ paths:
       summary: Listar clientes
       description: Retorna la lista de clientes registrados. Si no existen registros, retorna una lista vacía.
       operationId: getAllClients
-      security: []
       parameters:
       - name: limit
         in: query
@@ -140,7 +139,6 @@ paths:
       summary: Obtener datos de un cliente
       description: Retorna la información de un cliente específico mediante su ID.
       operationId: getClientById
-      security: []
       parameters:
       - name: clientId
         in: path
@@ -187,7 +185,6 @@ paths:
       summary: Crear un nuevo arriendo
       description: Registra un nuevo arriendo verificando stock y reservando vía gRPC en Equipos.
       operationId: createRental
-      security: []
       requestBody:
         required: true
         content:
@@ -255,7 +252,6 @@ paths:
       summary: Listar arriendos
       description: Retorna la lista de arriendos registrados. Si no existen registros, retorna una lista vacía.
       operationId: getAllRentals
-      security: []
       parameters:
       - name: limit
         in: query
@@ -308,7 +304,6 @@ paths:
       summary: Obtener datos de un arriendo
       description: Retorna los datos de un arriendo específico mediante su ID.
       operationId: getRentalById
-      security: []
       parameters:
       - name: rentalId
         in: path
@@ -355,7 +350,6 @@ paths:
       summary: Retornar un arriendo
       description: Finaliza el arriendo y libera la unidad en Equipos vía gRPC.
       operationId: returnRental
-      security: []
       parameters:
       - name: rentalId
         in: path
@@ -426,7 +420,6 @@ paths:
       summary: Cancelar un arriendo
       description: Cancela un arriendo activo y revierte la reserva de unidad en Equipos vía gRPC.
       operationId: cancelRental
-      security: []
       parameters:
       - name: rentalId
         in: path
