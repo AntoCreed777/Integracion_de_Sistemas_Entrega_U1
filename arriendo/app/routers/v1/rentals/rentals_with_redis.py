@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, HTTPException, Depends, status, Query, Path
+from fastapi import APIRouter, HTTPException, Depends, status, Query, Path, Response
 from datetime import datetime, timezone
 from typing import List, Union
 from sqlalchemy.orm import Session
@@ -23,6 +23,7 @@ from app.models import (
 )
 
 router = APIRouter(prefix='/v1/rentals', tags=['Rentals'])
+CACHE_HEADER = "CACHE_STATUS"
 
 @router.post(
     '',
@@ -91,6 +92,7 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db), admin
     }
 )
 def get_all_rentals(
+    response: Response,
     limit: int = Query(20, ge=1, le=100, description="Límite de resultados"),
     offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
     db: Session = Depends(get_db),
@@ -100,17 +102,19 @@ def get_all_rentals(
     cached = redis_client.get(cache_key)
     if cached:
         results = [RentalResponse.model_validate(r) for r in json.loads(cached)]
-        for r in results:
-            r.cacheHeader = "HIT"
+        response.headers[CACHE_HEADER] = "HIT"
         return results
 
     rentals = db.query(Rental).offset(offset).limit(limit).all()
     results = [build_rental_response(r) for r in rentals]
 
-    redis_client.setex(cache_key, 60, json.dumps([r.model_dump(mode="json") for r in results]))
+    redis_client.setex(
+        cache_key,
+        60,
+        json.dumps([r.model_dump(mode="json") for r in results])
+    )
 
-    for r in results:
-        r.cacheHeader = "MISS"
+    response.headers[CACHE_HEADER] = "MISS"
     return results
 
 @router.get(
@@ -124,6 +128,7 @@ def get_all_rentals(
     }
 )
 def get_rental_by_id(
+    response: Response,
     rentalId: int = Path(..., ge=1, description="ID del arriendo"),
     db: Session = Depends(get_db),
     client_auth: dict = Depends(client_validation)
@@ -132,17 +137,19 @@ def get_rental_by_id(
     cached = redis_client.get(cache_key)
     if cached:
         result = RentalResponse.model_validate(json.loads(cached))
-        result.cacheHeader = "HIT"
+        response.headers[CACHE_HEADER] = "HIT"
         return result
+
     rental = db.query(Rental).filter(Rental.id == rentalId).first()
     if not rental:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "RENTAL_NOT_FOUND", "message": f"Arriendo {rentalId} no encontrado."}
         )
+
     result = build_rental_response(rental)
-    result.cacheHeader = "MISS"
     redis_client.setex(cache_key, 60, json.dumps(result.model_dump(mode="json")))
+    response.headers[CACHE_HEADER] = "MISS"
     return result
 
 @router.post(
