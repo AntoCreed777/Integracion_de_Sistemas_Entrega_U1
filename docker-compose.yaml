@@ -22,14 +22,20 @@ services:
       context: ./arriendo
       dockerfile: Dockerfile
       target: base
+
     container_name: arriendos-api
     restart: always
+
     ports:
       - "8080:8080"
+
     environment:
       DATABASE_URL: postgresql://arriendos_user:arriendos_password@arriendo-db:5432/arriendo-db
       REDIS_HOST: arriendos-redis
       ACTIVATE_REDIS: ${ACTIVATE_REDIS}
+      EQUIPOS_GRPC_URL: "${EQUIPOS_GRPC_URL}"
+      GRPC_TIMEOUT_SECONDS: "${GRPC_TIMEOUT_SECONDS}"
+
     depends_on:
       arriendo-db:
         condition: service_healthy
@@ -40,14 +46,15 @@ services:
     image: redis:7-alpine
     container_name: arriendos-redis
     restart: always
+
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
+
   equipos-db:
     image: postgres:16-alpine
-
     container_name: equipos-db
 
     environment:
@@ -75,14 +82,18 @@ services:
     image: postgres:16-alpine
     container_name: arriendo-db
     restart: always
+
     environment:
       POSTGRES_USER: arriendos_user
       POSTGRES_PASSWORD: arriendos_password
       POSTGRES_DB: arriendo-db
+
     ports:
       - "5430:5432"
+
     volumes:
       - rentals_pg_data:/var/lib/postgresql/data
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U arriendos_user -d arriendo-db"]
       interval: 5s
