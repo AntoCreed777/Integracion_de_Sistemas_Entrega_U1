@@ -43,7 +43,7 @@ async def run_all():
         except Exception as exc:
             print(f"[ERROR] Al ejecutar el escenario {scenario.name}: {exc}")
         finally:
-            detener_docker_compose(delete_volumes=True)
+            detener_docker_compose(delete_volumes=False)
 
     generate_statistical_analysis()
 

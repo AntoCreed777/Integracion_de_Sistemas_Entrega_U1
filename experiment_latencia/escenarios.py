@@ -13,6 +13,7 @@ from experiment_latencia.config import (
 )
 from experiment_latencia.docker_aux import (
     docker_services_healthy,
+    limpiar_cache,
     levantar_docker_compose,
 )
 from experiment_latencia.metricas import (
@@ -98,8 +99,14 @@ async def execute_scenario(scenario: Scenario):
         print()
         print(f"[{scenario.name}] Repetición " f"{repetition}/{REPETITIONS}")
 
+        if with_redis:
+            limpiar_cache()
+
         # Warm-up separado de la medición.
-        await warmup(build_url(FIRST_ID))
+        await warmup(build_url())
+
+        if scenario == Scenario.B:
+            await prepare_cache_hit()
 
         urls = scenario_urls(scenario)
 

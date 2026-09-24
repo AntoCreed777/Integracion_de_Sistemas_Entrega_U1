@@ -45,6 +45,10 @@ async def fetch(
             headers={"API-Key": "apikey_admin"}
         )
 
+        if response.status_code != 200:
+            print(f"[ERROR] request_id={request_id} status_code={response.status_code}")
+            print(response.text)
+
         elapsed = (time.perf_counter() - start) * 1000
 
         return RequestResult(

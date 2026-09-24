@@ -1,4 +1,5 @@
 import argparse
+import os
 import pathlib
 import subprocess
 
@@ -38,14 +39,26 @@ def set_env_variable(key: str, value: str):
 
 def levantar_docker_compose(with_redis: bool = False):
     ensure_env_variables()
-    command = ["docker", "compose", "-f", str(COMPOSE_FILE), "up", "--build", "-d"]
+    command = [
+        "docker",
+        "compose",
+        "-f",
+        str(COMPOSE_FILE),
+        "up",
+        "--build",
+        "--force-recreate",
+        "-d",
+    ]
 
     if with_redis:
         set_env_variable("ACTIVATE_REDIS", "true")
     else:
         set_env_variable("ACTIVATE_REDIS", "false")
 
-    subprocess.run(command, check=True)
+    compose_env = os.environ.copy()
+    compose_env["ACTIVATE_REDIS"] = str(with_redis).lower()
+
+    subprocess.run(command, cwd=BASE_DIR, env=compose_env, check=True)
 
 
 def detener_docker_compose(delete_volumes: bool = False):
@@ -56,6 +69,27 @@ def detener_docker_compose(delete_volumes: bool = False):
         command.append("-v")
 
     subprocess.run(command, check=True)
+
+
+def limpiar_cache():
+    """Elimina las claves de Redis para aislar cada repetición."""
+    subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            str(COMPOSE_FILE),
+            "exec",
+            "-T",
+            "arriendos-redis",
+            "redis-cli",
+            "FLUSHDB",
+        ],
+        cwd=BASE_DIR,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def docker_services_healthy() -> bool:
