@@ -40,7 +40,8 @@ async def run_all():
     for scenario in scenarios:
         try:
             await execute_scenario(scenario)
-
+        except Exception as exc:
+            print(f"[ERROR] Al ejecutar el escenario {scenario.name}: {exc}")
         finally:
             detener_docker_compose(delete_volumes=True)
 
@@ -50,7 +51,12 @@ async def run_all():
 async def run_one(scenario: Scenario):
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    await execute_scenario(scenario)
+    try:
+        await execute_scenario(scenario)
+    except Exception as exc:
+        print(f"[ERROR] Al ejecutar el escenario {scenario.name}: {exc}")
+    finally:
+        detener_docker_compose(delete_volumes=True)
 
     generate_statistical_analysis()
 
