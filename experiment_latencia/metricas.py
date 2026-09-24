@@ -243,13 +243,6 @@ def generate_statistical_analysis():
 
     output.append("Nivel de significancia: alpha = 0.05\n")
 
-    output.append(
-        "La comparación inferencial utiliza los valores agregados "
-        "por repetición (n=5 por escenario), evitando tratar las "
-        "solicitudes concurrentes dentro de una misma ejecución como "
-        "observaciones independientes.\n"
-    )
-
     comparisons = [
         (Scenario.A, Scenario.B, "Sin cache vs HIT"),
         (Scenario.A, Scenario.C, "Sin cache vs MISS"),
@@ -281,6 +274,16 @@ def generate_statistical_analysis():
 
             output.append(
                 f"{metric}:\n" f"  A ({scenario_a}): {a}\n" f"  B ({scenario_b}): {b}\n"
+            )
+
+            relative_change = [
+                (a_i - b_i) / a_i * 100
+                for a_i, b_i in zip(a, b)
+            ]
+            median_change = np.median(relative_change)
+
+            output.append(
+                f"  Cambio relativo mediano: {median_change:.2f}%\n"
             )
 
             if wilcoxon is not None:
