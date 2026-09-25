@@ -1,0 +1,46 @@
+services:
+  equipos-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: equipos_db
+      POSTGRES_USER: equipos_user
+      POSTGRES_PASSWORD: equipos_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U equipos_user -d equipos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  equipos-api:
+    build:
+      context: ./Equipos
+      dockerfile: Dockerfile
+      target: base
+    environment:
+      DATABASE_HOST: equipos-db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: equipos_db
+      DATABASE_USER: equipos_user
+      DATABASE_PASSWORD: equipos_password
+      GRPC_HOST: "[::]"
+      GRPC_PORT: 50051
+    depends_on:
+      equipos-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/bin/grpc_health_probe", "-addr=:50051"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  cliente-node-tests:
+    build:
+      context: .
+      dockerfile: cliente-node/Dockerfile
+    environment:
+      EQUIPOS_GRPC_URL: equipos-api:50051
+      GRPC_TIMEOUT_MS: 5000
+    depends_on:
+      equipos-api:
+        condition: service_healthy
