@@ -1,0 +1,105 @@
+services:
+  equipos-api:
+    build:
+      context: ./Equipos
+      dockerfile: Dockerfile
+      target: base
+
+    container_name: equipos-api
+
+    env_file:
+      - .env
+
+    ports:
+      - "${EQUIPOS_GRPC_PORT}:50051"
+
+    depends_on:
+      equipos-db:
+        condition: service_healthy
+
+  arriendos-api:
+    build:
+      context: ./arriendo
+      dockerfile: Dockerfile
+      target: base
+
+    container_name: arriendos-api
+    restart: always
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      DATABASE_URL: postgresql://arriendos_user:arriendos_password@arriendo-db:5432/arriendo-db
+      REDIS_HOST: arriendos-redis
+      ACTIVATE_REDIS: ${ACTIVATE_REDIS}
+      EQUIPOS_GRPC_URL: "${EQUIPOS_GRPC_URL}"
+      GRPC_TIMEOUT_SECONDS: "${GRPC_TIMEOUT_SECONDS}"
+
+    depends_on:
+      arriendo-db:
+        condition: service_healthy
+      arriendos-redis:
+        condition: service_healthy
+
+  arriendos-redis:
+    image: redis:7-alpine
+    container_name: arriendos-redis
+    restart: always
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  equipos-db:
+    image: postgres:16-alpine
+    container_name: equipos-db
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "${EQUIPOS_DB_PORT}:5432"
+
+    volumes:
+      - equipos_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  arriendo-db:
+    image: postgres:16-alpine
+    container_name: arriendo-db
+    restart: always
+
+    environment:
+      POSTGRES_USER: arriendos_user
+      POSTGRES_PASSWORD: arriendos_password
+      POSTGRES_DB: arriendo-db
+
+    ports:
+      - "5430:5432"
+
+    volumes:
+      - rentals_pg_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arriendos_user -d arriendo-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  equipos_postgres_data:
+  rentals_pg_data:

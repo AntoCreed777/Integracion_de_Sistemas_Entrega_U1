@@ -1,0 +1,77 @@
+services:
+  equipos-api:
+    build:
+      context: ./Equipos
+      dockerfile: Dockerfile
+      target: test
+
+    container_name: equipos-api
+
+    env_file:
+      - .env.example #poner .env.example para probar
+
+    ports:
+      - "${EQUIPOS_GRPC_PORT:-50051}:50051"
+
+    depends_on:
+      equipos-db:
+        condition: service_healthy
+
+  equipos-db:
+    image: postgres:16-alpine
+
+    container_name: equipos-db
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-equipos_db}
+      POSTGRES_USER: ${POSTGRES_USER:-equipos_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-equipos_password}
+
+    ports:
+      - "${EQUIPOS_DB_PORT:-5433}:5432"
+
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-equipos_user} -d ${POSTGRES_DB:-equipos_db}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  arriendo-tests:
+    build:
+      context: ./arriendo
+      dockerfile: Dockerfile
+      target: test
+
+    container_name: arriendo-tests
+
+    environment:
+      DATABASE_URL: postgresql+psycopg2://arriendos_test_user:arriendos_test_password@arriendo-test-db:5432/arriendo_test_db
+
+    depends_on:
+      arriendo-test-db:
+        condition: service_healthy
+
+  arriendo-test-db:
+    image: postgres:16-alpine
+
+    container_name: arriendo-test-db
+
+    environment:
+      POSTGRES_DB: arriendo_test_db
+      POSTGRES_USER: arriendos_test_user
+      POSTGRES_PASSWORD: arriendos_test_password
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U arriendos_test_user -d arriendo_test_db"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
