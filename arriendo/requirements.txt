@@ -6,3 +6,4 @@ psycopg2-binary>=2.9.9
 grpcio>=1.62.0
 grpcio-tools>=1.62.0
 redis>=5.3.0
+psycopg
