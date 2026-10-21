@@ -1,41 +1,7 @@
 const grpc = require("@grpc/grpc-js");
-const protoLoader = require("@grpc/proto-loader");
-const path = require("node:path");
+const { createClient, unaryCall } = require("./grpc-client");
 
-const address = process.env.EQUIPOS_GRPC_URL || "equipos-api:50051";
-const timeoutMs = Number.parseInt(process.env.GRPC_TIMEOUT_MS || "5000", 10);
-
-// Esto esta pensado para funcionar en el contenedor de Docker, donde el .proto se encuentra en la raíz del proyecto. Si se ejecuta localmente, es posible que se necesite ajustar la ruta según tu estructura de carpetas.
-const protoPath = path.resolve(__dirname, "../equipos.proto");
-
-const definition = protoLoader.loadSync(protoPath, {
-  keepCase: false,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true,
-});
-
-const grpcPackage = grpc.loadPackageDefinition(definition);
-const Client = grpcPackage.equipos.v1.ServicioEquipos;
-
-function deadline() {
-  return new Date(Date.now() + timeoutMs);
-}
-
-function unary(client, method, request) {
-  return new Promise((resolve, reject) => {
-    client[method](request, { deadline: deadline() }, (error, response) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(response);
-    });
-  });
-}
-
-async function listar(client) {
+async function listar(client, deadline) {
   const stream = client.listarEquipos({}, { deadline: deadline() });
   let total = 0;
 
@@ -50,17 +16,18 @@ async function listar(client) {
 }
 
 async function main() {
-  const client = new Client(
-    address,
-    grpc.credentials.createInsecure(),
-  );
+  const connection = createClient({
+    defaultAddress: "equipos-api:50051",
+    defaultTimeoutMs: 5000,
+  });
+  const { client, deadline } = connection;
 
   try {
-    const total = await listar(client);
+    const total = await listar(client, deadline);
     console.log(`OK ListarEquipos: ${total} equipo(s) recibidos`);
 
     try {
-      await unary(client, "consultarEquipo", { id: 999999 });
+      await unaryCall(client, deadline, "consultarEquipo", { id: 999999 });
       throw new Error("ConsultarEquipo debía responder NOT_FOUND");
     } catch (error) {
       if (error.code !== grpc.status.NOT_FOUND) {

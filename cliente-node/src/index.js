@@ -1,40 +1,6 @@
-const path = require("node:path");
 const process = require("node:process");
 const grpc = require("@grpc/grpc-js");
-const protoLoader = require("@grpc/proto-loader");
-
-// Esto esta pensado para funcionar en el contenedor de Docker, donde el .proto se encuentra en la raíz del proyecto. Si se ejecuta localmente, es posible que se necesite ajustar la ruta según tu estructura de carpetas.
-const PROTO_PATH = path.resolve(__dirname, "../equipos.proto");
-
-const ADDRESS = process.env.EQUIPOS_GRPC_URL || "localhost:50051";
-const TIMEOUT_MS = Number.parseInt(process.env.GRPC_TIMEOUT_MS || "3000", 10);
-
-if (!Number.isInteger(TIMEOUT_MS) || TIMEOUT_MS <= 0) {
-  throw new Error("GRPC_TIMEOUT_MS debe ser un entero mayor que cero");
-}
-
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-  keepCase: false,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true,
-});
-
-const equiposProto = grpc.loadPackageDefinition(packageDefinition);
-const { equipos } = equiposProto;
-const { v1: equipoV1 } = equipos;
-
-function createClient() {
-  return new equipoV1.ServicioEquipos(
-    ADDRESS,
-    grpc.credentials.createInsecure(),
-  );
-}
-
-function buildDeadline() {
-  return new Date(Date.now() + TIMEOUT_MS);
-}
+const { createClient: createGrpcClient, unaryCall } = require("./grpc-client");
 
 function describeError(error) {
   if (!error) {
@@ -68,25 +34,18 @@ function showEquipo(equipo) {
   );
 }
 
-function unaryCall(client, methodName, request) {
-  return new Promise((resolve, reject) => {
-    client[methodName](request, { deadline: buildDeadline() }, (error, response) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve(response);
-    });
-  });
-}
-
-async function consultar(client, id) {
-  const equipo = await unaryCall(client, "consultarEquipo", { id });
+async function consultar(client, deadline, id) {
+  const equipo = await unaryCall(client, deadline, "consultarEquipo", { id });
   showEquipo(equipo);
 }
 
-async function disponibilidad(client, id) {
-  const resultado = await unaryCall(client, "consultarDisponibilidadEquipo", { id });
+async function disponibilidad(client, deadline, id) {
+  const resultado = await unaryCall(
+    client,
+    deadline,
+    "consultarDisponibilidadEquipo",
+    { id },
+  );
   console.log(
     JSON.stringify(
       {
@@ -99,8 +58,8 @@ async function disponibilidad(client, id) {
   );
 }
 
-async function listar(client) {
-  const stream = client.listarEquipos({}, { deadline: buildDeadline() });
+async function listar(client, deadline) {
+  const stream = client.listarEquipos({}, { deadline: deadline() });
   let total = 0;
 
   for await (const equipo of stream) {
@@ -111,25 +70,25 @@ async function listar(client) {
   console.log(`Equipos recibidos: ${total}`);
 }
 
-async function reservar(client, id) {
-  await unaryCall(client, "reservarEquipo", { id });
+async function reservar(client, deadline, id) {
+  await unaryCall(client, deadline, "reservarEquipo", { id });
   console.log(`Reserva realizada para el equipo ${id}`);
 }
 
-async function liberar(client, id) {
-  await unaryCall(client, "liberarEquipo", { id });
+async function liberar(client, deadline, id) {
+  await unaryCall(client, deadline, "liberarEquipo", { id });
   console.log(`Liberación realizada para el equipo ${id}`);
 }
 
-async function demo(client, id) {
+async function demo(client, deadline, id) {
   console.log("1) Consultar equipo");
-  await consultar(client, id);
+  await consultar(client, deadline, id);
 
   console.log("\n2) Consultar disponibilidad");
-  await disponibilidad(client, id);
+  await disponibilidad(client, deadline, id);
 
   console.log("\n3) Listar catálogo vía streaming");
-  await listar(client);
+  await listar(client, deadline);
 }
 
 function printHelp() {
@@ -159,33 +118,33 @@ async function main() {
     return;
   }
 
-  const client = createClient();
+  const { client, deadline } = createGrpcClient();
 
   try {
     switch (command) {
       case "consultar": {
-        await consultar(client, parsePositiveInt(arg, "ID del equipo"));
+        await consultar(client, deadline, parsePositiveInt(arg, "ID del equipo"));
         break;
       }
       case "disponibilidad": {
-        await disponibilidad(client, parsePositiveInt(arg, "ID del equipo"));
+        await disponibilidad(client, deadline, parsePositiveInt(arg, "ID del equipo"));
         break;
       }
       case "listar": {
-        await listar(client);
+        await listar(client, deadline);
         break;
       }
       case "reservar": {
-        await reservar(client, parsePositiveInt(arg, "ID del equipo"));
+        await reservar(client, deadline, parsePositiveInt(arg, "ID del equipo"));
         break;
       }
       case "liberar": {
-        await liberar(client, parsePositiveInt(arg, "ID del equipo"));
+        await liberar(client, deadline, parsePositiveInt(arg, "ID del equipo"));
         break;
       }
       case "demo": {
         const id = arg ? parsePositiveInt(arg, "ID del equipo") : 1;
-        await demo(client, id);
+        await demo(client, deadline, id);
         break;
       }
       default:
