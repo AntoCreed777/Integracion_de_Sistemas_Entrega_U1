@@ -5,6 +5,8 @@ import grpc
 from app.init_db import crear_tablas
 from app.servicio_equipos import ServicioEquipos
 from generated import equipos_pb2_grpc
+from app.fill_db import cargar_equipos
+from pathlib import Path
 
 
 from grpc_health.v1 import health
@@ -54,6 +56,9 @@ def main() -> None:
     direccion = f"{host}:{puerto}"
 
     crear_tablas()
+    cargar_equipos(
+        Path(__file__).parent / "initial_data.json"
+        )
 
     servidor = crear_servidor(direccion)
     servidor.start()

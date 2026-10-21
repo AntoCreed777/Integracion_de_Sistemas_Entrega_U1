@@ -1,0 +1,26 @@
+[
+  {
+    "equipo_id": 1,
+    "nombre": "Multímetro digital",
+    "descripcion": "Multímetro para mediciones eléctricas",
+    "cantidad_total": 10,
+    "unidades_disponibles": 8,
+    "activo": true
+  },
+  {
+    "equipo_id": 2,
+    "nombre": "Osciloscopio",
+    "descripcion": "Osciloscopio digital de laboratorio",
+    "cantidad_total": 5,
+    "unidades_disponibles": 5,
+    "activo": true
+  },
+  {
+    "equipo_id": 3,
+    "nombre": "Fuente de alimentación",
+    "descripcion": null,
+    "cantidad_total": 7,
+    "unidades_disponibles": 4,
+    "activo": true
+  }
+]
