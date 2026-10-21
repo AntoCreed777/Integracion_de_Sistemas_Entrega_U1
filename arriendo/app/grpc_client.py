@@ -55,43 +55,66 @@ def reservar_unidad(equipment_id: int):
         )
 
     except grpc.RpcError as error:
-        if error.code() == grpc.StatusCode.NOT_FOUND:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={
-                    "code": "EQUIPMENT_NOT_FOUND",
-                    "message": (
-                        f"El equipo {equipment_id} "
-                        "no existe en el catálogo."
-                    ),
-                },
-            ) from error
+        match error.code():
+            case grpc.StatusCode.NOT_FOUND:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={
+                        "code": "EQUIPMENT_NOT_FOUND",
+                        "message": (
+                            f"El equipo {equipment_id} "
+                            "no existe en el catálogo."
+                        ),
+                    },
+                ) from error
 
-        if error.code() == grpc.StatusCode.UNAVAILABLE:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail={
-                    "code": "EQUIPMENTS_SERVICE_UNAVAILABLE",
-                    "message": (
-                        "El servicio de Equipos "
-                        "no está disponible."
-                    ),
-                },
-            ) from error
+            case grpc.StatusCode.UNAVAILABLE:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail={
+                        "code": "EQUIPMENTS_SERVICE_UNAVAILABLE",
+                        "message": (
+                            "El servicio de Equipos "
+                            "no está disponible."
+                        ),
+                    },
+                ) from error
 
-        if error.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail={
-                    "code": "EQUIPMENTS_SERVICE_TIMEOUT",
-                    "message": (
-                        "Equipos no respondió dentro "
-                        "del tiempo permitido."
-                    ),
-                },
-            ) from error
+            case grpc.StatusCode.DEADLINE_EXCEEDED:
+                raise HTTPException(
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail={
+                        "code": "EQUIPMENTS_SERVICE_TIMEOUT",
+                        "message": (
+                            "Equipos no respondió dentro "
+                            "del tiempo permitido."
+                        ),
+                    },
+                ) from error
 
-        raise
+            case grpc.StatusCode.FAILED_PRECONDITION:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "code": "INVALID_STATE_TRANSITION", #QUESTION: Esta bien este codigo??
+                        "message": (
+                            f"El equipo {equipment_id} "
+                            "no se pudo reservar."
+                        ),
+                    },
+                ) from error
+
+            case _:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail={
+                        "code": "EQUIPMENTS_SERVICE_ERROR",
+                        "message": (
+                            "Ocurrió un error al "
+                            "comunicarse con el servicio de Equipos."
+                        ),
+                    },
+                ) from error
 
     finally:
         channel.close()
@@ -108,31 +131,66 @@ def liberar_unidad(equipment_id: int):
         )
 
     except grpc.RpcError as error:
-        if error.code() == grpc.StatusCode.UNAVAILABLE:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail={
-                    "code": "EQUIPMENTS_SERVICE_UNAVAILABLE",
-                    "message": (
-                        "El servicio de Equipos "
-                        "no está disponible."
-                    ),
-                },
-            ) from error
+        match error.code():
+            case grpc.StatusCode.NOT_FOUND:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={
+                        "code": "EQUIPMENT_NOT_FOUND",
+                        "message": (
+                            f"El equipo {equipment_id} "
+                            "no existe en el catálogo."
+                        ),
+                    },
+                ) from error
 
-        if error.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail={
-                    "code": "EQUIPMENTS_SERVICE_TIMEOUT",
-                    "message": (
-                        "Equipos no respondió dentro "
-                        "del tiempo permitido."
-                    ),
-                },
-            ) from error
+            case grpc.StatusCode.UNAVAILABLE:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail={
+                        "code": "EQUIPMENTS_SERVICE_UNAVAILABLE",
+                        "message": (
+                            "El servicio de Equipos "
+                            "no está disponible."
+                        ),
+                    },
+                ) from error
 
-        raise
+            case grpc.StatusCode.DEADLINE_EXCEEDED:
+                raise HTTPException(
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail={
+                        "code": "EQUIPMENTS_SERVICE_TIMEOUT",
+                        "message": (
+                            "Equipos no respondió dentro "
+                            "del tiempo permitido."
+                        ),
+                    },
+                ) from error
+
+            case grpc.StatusCode.FAILED_PRECONDITION:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "code": "INVALID_STATE_TRANSITION",
+                        "message": (
+                            f"El equipo {equipment_id} "
+                            "no se puede liberar."
+                        ),
+                    },
+                ) from error
+
+            case _:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail={
+                        "code": "EQUIPMENTS_SERVICE_ERROR",
+                        "message": (
+                            "Ocurrió un error al "
+                            "comunicarse con el servicio de Equipos."
+                        ),
+                    },
+                ) from error
 
     finally:
         channel.close()
