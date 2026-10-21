@@ -1,3 +1,8 @@
+# Para ejecutarlo:
+# Haslo desde Equipos/
+# Usa este comando:
+# PYTHONPATH="$PWD:$PWD/generated" python3 app/cliente.py
+
 import argparse
 import os
 import sys
