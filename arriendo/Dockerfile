@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar el resto del código
 COPY . .
+COPY --from=equipos equipos.proto .
 
 # 1. Crea la carpeta y su __init__.py para que Python lo reconozca como módulo
 RUN mkdir -p app/generated && touch app/generated/__init__.py

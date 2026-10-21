@@ -22,6 +22,8 @@ services:
       context: ./arriendo
       dockerfile: Dockerfile
       target: base
+      additional_contexts:
+        equipos: ./Equipos  # Para poder acceder a equipos.proto
 
     container_name: arriendos-api
     restart: always

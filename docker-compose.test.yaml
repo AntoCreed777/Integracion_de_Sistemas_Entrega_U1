@@ -46,6 +46,9 @@ services:
       context: ./arriendo
       dockerfile: Dockerfile
       target: test
+      additional_contexts:
+        equipos: ./Equipos  # Para poder acceder a equipos.proto
+
 
     container_name: arriendo-tests
 
