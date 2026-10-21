@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, status, Query, Path
+import json
+from fastapi import APIRouter, HTTPException, Depends, status, Query, Path, Response
 from datetime import datetime, timezone
 from typing import List, Union
 from sqlalchemy.orm import Session
+
 
 from app.database import get_db
 from app.bd_models import Client, Rental
@@ -20,7 +22,13 @@ from app.models import (
     GatewayTimeoutError,
 )
 
+from app.redis import ACTIVATE_REDIS
+
+if ACTIVATE_REDIS:
+    from app.redis import redis_client
+
 router = APIRouter(prefix='/v1/rentals', tags=['Rentals'])
+CACHE_HEADER = "CACHE_STATUS"   # Solo se usa si ACTIVATE_REDIS es True
 
 @router.post(
     '',
@@ -36,13 +44,18 @@ router = APIRouter(prefix='/v1/rentals', tags=['Rentals'])
         '504': {'model': GatewayTimeoutError},
     }
 )
-def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db), admin_auth: dict = Depends(admin_validation)) -> RentalResponse:
+def create_rental(
+    rental_in: RentalRequest,
+    db: Session = Depends(get_db),
+    admin_auth: dict = Depends(admin_validation)
+) -> RentalResponse:
     # 1. Validar fechas
-    if rental_in.endDate <= rental_in.startDate:
+    if rental_in.endDate <= rental_in.startDate:    #QUESTION: Esta bien que sea <= o deberia ser < ?
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "BAD_REQUEST", "message": "endDate debe ser posterior a startDate."},
         )
+
     # 2. Verificar que el cliente exista
     client = db.query(Client).filter(Client.id == rental_in.clientId).first()
     if not client:
@@ -70,9 +83,18 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db), admin
         try:
             liberar_unidad(rental_in.equipmentId)
         except HTTPException:
+            # Si la compensación también falla, queda una unidad reservada
+            # sin arriendo asociado. Es un costo aceptado que se documenta
+            # en el ADR de resiliencia (D4): no hay forma de garantizar
+            # atomicidad entre dos servicios sin una transacción
+            # distribuida, que está fuera del alcance de este encargo.
             pass
         raise
     db.refresh(db_rental)
+
+    if ACTIVATE_REDIS:
+        for key in redis_client.scan_iter("rentals:list:*"):
+            redis_client.delete(key)
     
     return build_rental_response(db_rental)
 
@@ -87,14 +109,32 @@ def create_rental(rental_in: RentalRequest, db: Session = Depends(get_db), admin
     }
 )
 def get_all_rentals(
+    response: Response,
     limit: int = Query(20, ge=1, le=100, description="Límite de resultados"),
     offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
     db: Session = Depends(get_db),
     client_auth: dict = Depends(client_validation)
 ) -> List[RentalResponse]:
-    rentals = db.query(Rental).order_by(Rental.id).offset(offset).limit(limit).all()
-    return [build_rental_response(r) for r in rentals]
+    if ACTIVATE_REDIS:
+        cache_key = f"rentals:list:{limit}:{offset}"
+        cached = redis_client.get(cache_key)
+        if cached:
+            results = [RentalResponse.model_validate(r) for r in json.loads(cached)]
+            response.headers[CACHE_HEADER] = "HIT"
+            return results
 
+    rentals = db.query(Rental).order_by(Rental.id).offset(offset).limit(limit).all()
+    results = [build_rental_response(r) for r in rentals]
+
+    if ACTIVATE_REDIS:
+        redis_client.setex(
+            cache_key,
+            60,
+            json.dumps([r.model_dump(mode="json") for r in results])
+        )
+        response.headers[CACHE_HEADER] = "MISS"
+    
+    return results
 
 @router.get(
     '/{rentalId}',
@@ -107,18 +147,37 @@ def get_all_rentals(
     }
 )
 def get_rental_by_id(
+    response: Response,
     rentalId: int = Path(..., ge=1, description="ID del arriendo"),
     db: Session = Depends(get_db),
     client_auth: dict = Depends(client_validation)
 ) -> RentalResponse:
+    if ACTIVATE_REDIS:
+        cache_key = f"rental:{rentalId}"
+        cached = redis_client.get(cache_key)
+        if cached:
+            result = RentalResponse.model_validate(json.loads(cached))
+            response.headers[CACHE_HEADER] = "HIT"
+            return result
+
     rental = db.query(Rental).filter(Rental.id == rentalId).first()
     if not rental:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "RENTAL_NOT_FOUND", "message": f"Arriendo {rentalId} no encontrado."}
         )
-    return build_rental_response(rental)
 
+    result = build_rental_response(rental)
+
+    if ACTIVATE_REDIS:
+        redis_client.setex(
+            cache_key,
+            60,
+            json.dumps(result.model_dump(mode="json"))
+        )
+        response.headers[CACHE_HEADER] = "MISS"
+
+    return result
 
 @router.post(
     '/{rentalId}/cancel',
@@ -157,6 +216,12 @@ def cancel_rental(
     rental.status = "CANCELLED"
     db.commit()
     db.refresh(rental)
+
+    if ACTIVATE_REDIS:
+        redis_client.delete(f"rental:{rentalId}")
+        for key in redis_client.scan_iter("rentals:list:*"):
+            redis_client.delete(key)
+
     return build_rental_response(rental)
 
 
@@ -197,6 +262,12 @@ def return_rental(
     rental.status = "COMPLETED"
     db.commit()
     db.refresh(rental)
+
+    if ACTIVATE_REDIS:
+        redis_client.delete(f"rental:{rentalId}")
+        for key in redis_client.scan_iter("rentals:list:*"):
+            redis_client.delete(key)
+
     return build_rental_response(rental)
 
 def build_rental_response(rental: Rental) -> RentalResponse:

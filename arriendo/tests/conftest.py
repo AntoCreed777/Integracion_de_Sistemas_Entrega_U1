@@ -72,15 +72,15 @@ def unauthenticated_client(db_session):
 
 @pytest.fixture(autouse=True)
 def grpc_equipment_service(monkeypatch):
-    from app.routers.v1.rentals import rentals_without_redis
+    from app.routers.v1 import rentals
 
     monkeypatch.setattr(
-        rentals_without_redis,
+        rentals,
         "reservar_unidad",
         lambda equipment_id: None,
     )
     monkeypatch.setattr(
-        rentals_without_redis,
+        rentals,
         "liberar_unidad",
         lambda equipment_id: None,
     )
