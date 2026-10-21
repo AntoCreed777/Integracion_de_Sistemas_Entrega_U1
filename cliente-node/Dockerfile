@@ -6,5 +6,6 @@ COPY cliente-node/package*.json ./
 RUN npm install --omit=dev
 
 COPY cliente-node/src/ ./src/
+COPY --from=equipos equipos.proto .
 
 CMD ["npm", "run", "test:integration"]

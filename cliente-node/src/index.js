@@ -3,7 +3,9 @@ const process = require("node:process");
 const grpc = require("@grpc/grpc-js");
 const protoLoader = require("@grpc/proto-loader");
 
-const PROTO_PATH = path.resolve(__dirname, "../../Equipos/equipos.proto");
+// Esto esta pensado para funcionar en el contenedor de Docker, donde el .proto se encuentra en la raíz del proyecto. Si se ejecuta localmente, es posible que se necesite ajustar la ruta según tu estructura de carpetas.
+const PROTO_PATH = path.resolve(__dirname, "../equipos.proto");
+
 const ADDRESS = process.env.EQUIPOS_GRPC_URL || "localhost:50051";
 const TIMEOUT_MS = Number.parseInt(process.env.GRPC_TIMEOUT_MS || "3000", 10);
 

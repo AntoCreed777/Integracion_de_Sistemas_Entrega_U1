@@ -38,6 +38,8 @@ services:
     build:
       context: .
       dockerfile: cliente-node/Dockerfile
+      additional_contexts:
+        equipos: ./Equipos  # Para poder acceder a equipos.proto
     environment:
       EQUIPOS_GRPC_URL: equipos-api:50051
       GRPC_TIMEOUT_MS: 5000

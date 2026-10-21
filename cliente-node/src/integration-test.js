@@ -4,7 +4,9 @@ const path = require("node:path");
 
 const address = process.env.EQUIPOS_GRPC_URL || "equipos-api:50051";
 const timeoutMs = Number.parseInt(process.env.GRPC_TIMEOUT_MS || "5000", 10);
-const protoPath = path.resolve(__dirname, "../../Equipos/equipos.proto");
+
+// Esto esta pensado para funcionar en el contenedor de Docker, donde el .proto se encuentra en la raíz del proyecto. Si se ejecuta localmente, es posible que se necesite ajustar la ruta según tu estructura de carpetas.
+const protoPath = path.resolve(__dirname, "../equipos.proto");
 
 const definition = protoLoader.loadSync(protoPath, {
   keepCase: false,
