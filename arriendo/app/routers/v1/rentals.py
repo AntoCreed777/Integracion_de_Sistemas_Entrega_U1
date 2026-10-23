@@ -266,33 +266,54 @@ def cancel_rental(
 def return_rental(
     rentalId: int = Path(..., ge=1),
     db: Session = Depends(get_db),
-    admin_auth: dict = Depends(admin_validation)
+    admin_auth: dict = Depends(admin_validation),
 ) -> RentalResponse:
-    rental = db.query(Rental).filter(Rental.id == rentalId).first()
-    if not rental:
+    rental = db.execute(
+        update(Rental)
+        .where(Rental.id == rentalId, Rental.status == "ACTIVE")
+        .values(status="COMPLETED")
+        .returning(Rental)
+    ).scalar_one_or_none()
+
+    if rental is None:
+        db.rollback()
+        current = db.get(Rental, rentalId)
+
+        if current is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "RENTAL_NOT_FOUND",
+                    "message": f"Arriendo {rentalId} no encontrado.",
+                },
+            )
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "RENTAL_NOT_FOUND", "message": f"Arriendo {rentalId} no encontrado."}
-        )
-        
-    if rental.status != "ACTIVE":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "INVALID_STATE_TRANSITION", "message": f"No se puede retornar un arriendo que está en estado {rental.status}."}
+            status_code=409,
+            detail={
+                "code": "INVALID_STATE_TRANSITION",
+                "message": (
+                    f"No se puede retornar un arriendo "
+                    f"que está en estado {current.status}."
+                ),
+            },
         )
 
-    liberar_unidad(rental.equipment_id)
+    response = build_rental_response(rental)
 
-    rental.status = "COMPLETED"
-    db.commit()
-    db.refresh(rental)
+    try:
+        liberar_unidad(rental.equipment_id)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     if ACTIVATE_REDIS:
         redis_client.delete(f"rental:{rentalId}")
         for key in redis_client.scan_iter("rentals:list:*"):
             redis_client.delete(key)
 
-    return build_rental_response(rental)
+    return response
 
 def build_rental_response(rental: Rental) -> RentalResponse:
     start_date = (
