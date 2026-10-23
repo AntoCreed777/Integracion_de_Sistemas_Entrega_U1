@@ -234,6 +234,18 @@ paths:
                   value:
                     code: INSUFFICIENT_STOCK
                     message: No hay unidades disponibles para el equipo seleccionado.
+        '500':
+          description: Falló la compensación local de una reserva incompleta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '502':
+          description: Error en la respuesta del servicio de Equipos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadGatewayError'
         '503':
           description: Servicio de Equipos (gRPC) no disponible
           content:
@@ -401,6 +413,18 @@ paths:
                   value:
                     code: INVALID_STATE_TRANSITION
                     message: El arriendo no está ACTIVE, por lo que no puede retornarse.
+        '500':
+          description: Falló la compensación del estado local
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '502':
+          description: Error en la respuesta del servicio de Equipos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadGatewayError'
         '503':
           description: Servicio de Equipos (gRPC) no disponible al intentar liberar unidad
           content:
@@ -471,6 +495,18 @@ paths:
                   value:
                     code: INVALID_STATE_TRANSITION
                     message: El arriendo no está ACTIVE, por lo que no puede cancelarse.
+        '500':
+          description: Falló la compensación del estado local
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerError'
+        '502':
+          description: Error en la respuesta del servicio de Equipos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadGatewayError'
         '503':
           description: Servicio de Equipos (gRPC) no disponible
           content:
@@ -705,11 +741,14 @@ components:
           - INSUFFICIENT_STOCK
           - INVALID_STATE_TRANSITION
           - EMAIL_ALREADY_EXISTS
+          - EQUIPMENTS_RESOURCE_ALREADY_EXISTS
+          - EQUIPMENTS_OPERATION_ABORTED
           description: |-
             Motivo del conflicto:
             - INSUFFICIENT_STOCK: no hay unidades disponibles del equipo (POST /v1/rentals).
             - INVALID_STATE_TRANSITION: el arriendo no está ACTIVE (return y cancel).
             - EMAIL_ALREADY_EXISTS: el email ya está registrado (POST /v1/clients).
+            - EQUIPMENTS_RESOURCE_ALREADY_EXISTS / EQUIPMENTS_OPERATION_ABORTED: conflicto informado por Equipos.
           example: INSUFFICIENT_STOCK
         message:
           type: string
@@ -740,6 +779,32 @@ components:
         message:
           type: string
           example: Tiempo de espera agotado al conectar con el servicio gRPC de Equipos.
+
+    BadGatewayError:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+          example: EQUIPMENTS_SERVICE_ERROR
+        message:
+          type: string
+          example: Ocurrió un error interno en el servicio de Equipos.
+
+    InternalServerError:
+      type: object
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+          example: RENTAL_COMPENSATION_FAILED
+        message:
+          type: string
+          example: No se pudo completar la compensación del arriendo.
 
     HealthResponse:
       type: object

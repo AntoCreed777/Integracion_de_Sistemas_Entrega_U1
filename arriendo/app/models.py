@@ -120,12 +120,14 @@ class Code(Enum):
     INSUFFICIENT_STOCK = 'INSUFFICIENT_STOCK'
     INVALID_STATE_TRANSITION = 'INVALID_STATE_TRANSITION'
     EMAIL_ALREADY_EXISTS = 'EMAIL_ALREADY_EXISTS'
+    EQUIPMENTS_RESOURCE_ALREADY_EXISTS = 'EQUIPMENTS_RESOURCE_ALREADY_EXISTS'
+    EQUIPMENTS_OPERATION_ABORTED = 'EQUIPMENTS_OPERATION_ABORTED'
 
 
 class ConflictError(BaseModel):
     code: Code = Field(
         ...,
-        description='Motivo del conflicto:\n- INSUFFICIENT_STOCK: no hay unidades disponibles del equipo (POST /v1/rentals).\n- INVALID_STATE_TRANSITION: el arriendo no está ACTIVE (return y cancel).\n- EMAIL_ALREADY_EXISTS: el email ya está registrado (POST /v1/clients).',
+        description='Motivo del conflicto:\n- INSUFFICIENT_STOCK: no hay unidades disponibles del equipo (POST /v1/rentals).\n- INVALID_STATE_TRANSITION: el arriendo no está ACTIVE (return y cancel).\n- EMAIL_ALREADY_EXISTS: el email ya está registrado (POST /v1/clients).\n- EQUIPMENTS_RESOURCE_ALREADY_EXISTS / EQUIPMENTS_OPERATION_ABORTED: conflicto informado por Equipos.',
         examples=['INSUFFICIENT_STOCK'],
     )
     message: str = Field(
@@ -144,6 +146,20 @@ class GatewayTimeoutError(BaseModel):
     code: str = Field(..., examples=['EQUIPMENTS_SERVICE_TIMEOUT'])
     message: str = Field(
         ..., examples=['Tiempo de espera agotado al conectar con el servicio gRPC de Equipos.'],
+    )
+
+
+class BadGatewayError(BaseModel):
+    code: str = Field(..., examples=['EQUIPMENTS_SERVICE_ERROR'])
+    message: str = Field(
+        ..., examples=['Ocurrió un error interno en el servicio de Equipos.']
+    )
+
+
+class InternalServerError(BaseModel):
+    code: str = Field(..., examples=['RENTAL_COMPENSATION_FAILED'])
+    message: str = Field(
+        ..., examples=['No se pudo completar la compensación del arriendo.']
     )
 
 
