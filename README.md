@@ -2,15 +2,9 @@
 
 Las siguientes instrucciones asumen que **Docker** y **Docker Compose** se encuentran instalados y que los comandos se ejecutan desde la **raíz del proyecto**.
 
-## Creación del archivo `.env`
+## Configuración del archivo `.env`
 
-Utilice el archivo plantilla `.env.example` para generar el archivo `.env` mediante el siguiente comando:
-
-```
-cp .env.example .env
-```
-
-Una vez creado, modifique las variables de entorno según sea necesario para adaptarlas a su contexto de ejecución.
+Modifique las variables de entorno según sea necesario para adaptarlas a su contexto de ejecución.
 
 ## Ejecución de los servicios
 
