@@ -49,6 +49,8 @@ services:
       DATABASE_URL: postgresql+psycopg2://arriendos_test_user:arriendos_test_password@arriendo-db:5432/arriendo_test_db
       EQUIPOS_GRPC_URL: equipos-api:50051
       ACTIVATE_REDIS: "false"
+      ADMIN_API_KEY: apikey_admin
+      CLIENT_API_KEY: apikey_cliente
     depends_on:
       arriendo-db:
         condition: service_healthy
@@ -79,6 +81,8 @@ services:
       API_BASE_URL: http://arriendo-api:8080
       REAL_GRPC_TEST: "1"
       ACTIVATE_REDIS: "false"
+      ADMIN_API_KEY: apikey_admin
+      CLIENT_API_KEY: apikey_cliente
     command: ["pytest", "-q"]
     depends_on:
       arriendo-api:
