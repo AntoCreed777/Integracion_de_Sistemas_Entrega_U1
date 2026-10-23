@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, status, Query, Path, Resp
 from datetime import datetime, timezone
 from typing import List, Union
 from sqlalchemy.orm import Session
-
+from sqlalchemy import update
 
 from app.database import get_db
 from app.bd_models import Client, Rental
@@ -196,33 +196,57 @@ def get_rental_by_id(
 def cancel_rental(
     rentalId: int = Path(..., ge=1),
     db: Session = Depends(get_db),
-    admin_auth: dict = Depends(admin_validation)
+    admin_auth: dict = Depends(admin_validation),
 ) -> RentalResponse:
-    rental = db.query(Rental).filter(Rental.id == rentalId).first()
-    if not rental:
+    rental = db.execute(
+        update(Rental)
+        .where(Rental.id == rentalId, Rental.status == "ACTIVE")
+        .values(status="CANCELLED")
+        .returning(Rental)
+    ).scalar_one_or_none()
+
+    if rental is None:
+        db.rollback()
+
+        # EN un caso limite esto podria dar un codigo incorrecto si rental cambia de estado entre la consulta y el update, pero es un caso muy raro y no se considera crítico para este encargo.
+        # El worst case scenario es un codigo incorrecto pero el update se mantiene atomico
+        current = db.get(Rental, rentalId)
+
+        if current is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "RENTAL_NOT_FOUND",
+                    "message": f"Arriendo {rentalId} no encontrado.",
+                },
+            )
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "RENTAL_NOT_FOUND", "message": f"Arriendo {rentalId} no encontrado."}
-        )
-        
-    if rental.status != "ACTIVE":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "INVALID_STATE_TRANSITION", "message": f"No se puede cancelar un arriendo que está en estado {rental.status}."}
+            status_code=409,
+            detail={
+                "code": "INVALID_STATE_TRANSITION",
+                "message": (
+                    f"No se puede cancelar un arriendo "
+                    f"que está en estado {current.status}."
+                ),
+            },
         )
 
-    liberar_unidad(rental.equipment_id)
+    response = build_rental_response(rental)
 
-    rental.status = "CANCELLED"
-    db.commit()
-    db.refresh(rental)
+    try:
+        liberar_unidad(rental.equipment_id)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     if ACTIVATE_REDIS:
         redis_client.delete(f"rental:{rentalId}")
         for key in redis_client.scan_iter("rentals:list:*"):
             redis_client.delete(key)
 
-    return build_rental_response(rental)
+    return response
 
 
 @router.post(
