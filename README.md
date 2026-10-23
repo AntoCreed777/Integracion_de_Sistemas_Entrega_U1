@@ -20,6 +20,8 @@ Para construir las imágenes y levantar los servicios definidos en `docker-compo
 docker compose -f docker-compose.yaml up --build
 ```
 
+La API REST queda disponible en `http://localhost:8080`. El servicio gRPC y las bases de datos no publican puertos al host: los servicios se comunican por la red interna de Docker Compose.
+
 Para detener los contenedores asociados al proyecto:
 
 ```bash
