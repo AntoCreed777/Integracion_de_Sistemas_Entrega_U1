@@ -10,9 +10,6 @@ services:
     env_file:
       - .env
 
-    #ports:
-    #  - "${EQUIPOS_GRPC_PORT}:50051"
-
     depends_on:
       equipos-db:
         condition: service_healthy
@@ -37,6 +34,8 @@ services:
       ACTIVATE_REDIS: ${ACTIVATE_REDIS}
       EQUIPOS_GRPC_URL: "${EQUIPOS_GRPC_URL}"
       GRPC_TIMEOUT_SECONDS: "${GRPC_TIMEOUT_SECONDS}"
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      CLIENT_API_KEY: ${CLIENT_API_KEY}
 
     depends_on:
       arriendo-db:
@@ -63,9 +62,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-    ports:
-      - "${EQUIPOS_DB_PORT}:5432"
 
     volumes:
       - equipos_postgres_data:/var/lib/postgresql/data

@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+
 CLIENTE = {"name": "Ana Pérez", "email": "ana@example.com"}
 ARRIENDO = {
     "clientId": 1,
@@ -150,6 +152,40 @@ class TestRentals:
         assert retrieved.status_code == 200
         assert retrieved.json()["id"] == created["id"]
 
+    def test_cache_se_inyecta_en_el_router(self, client):
+        from app.main import app
+        from app.redis import get_rental_cache
+
+        class InMemoryRentalCache:
+            enabled = True
+
+            def __init__(self):
+                self.values = {}
+
+            def get(self, key):
+                return self.values.get(key)
+
+            def set(self, key, value, ttl_seconds=60):
+                self.values[key] = value
+
+            def invalidate(self, rental_id=None):
+                self.values.clear()
+
+        cache = InMemoryRentalCache()
+        app.dependency_overrides[get_rental_cache] = lambda: cache
+        created_client = client.post("/v1/clients", json=CLIENTE).json()
+        client.post(
+            "/v1/rentals",
+            json={**ARRIENDO, "clientId": created_client["id"]},
+        )
+
+        first_response = client.get("/v1/rentals")
+        second_response = client.get("/v1/rentals")
+
+        assert first_response.headers["CACHE_STATUS"] == "MISS"
+        assert second_response.headers["CACHE_STATUS"] == "HIT"
+        assert first_response.json() == second_response.json()
+
     def test_obtener_arriendo_inexistente(self, client):
         response = client.get("/v1/rentals/99999")
 
@@ -167,6 +203,34 @@ class TestRentals:
 
         assert response.status_code == 200
         assert response.json()["status"] == "CANCELLED"
+
+    def test_error_al_liberar_conserva_arriendo_activo(
+        self,
+        client,
+        db_session,
+        crear_arriendo,
+        monkeypatch,
+    ):
+        from app.routers.v1 import rentals
+
+        rental = crear_arriendo()
+
+        def fail_to_release(equipment_id):
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "INVALID_STATE_TRANSITION",
+                    "message": "No se pudo liberar la unidad.",
+                },
+            )
+
+        monkeypatch.setattr(rentals, "liberar_unidad", fail_to_release)
+
+        response = client.post(f"/v1/rentals/{rental.id}/cancel")
+
+        db_session.refresh(rental)
+        assert response.status_code == 409
+        assert rental.status == "ACTIVE"
 
     def test_retorno_completa_arriendo(self, client):
         created_client = client.post("/v1/clients", json=CLIENTE).json()
