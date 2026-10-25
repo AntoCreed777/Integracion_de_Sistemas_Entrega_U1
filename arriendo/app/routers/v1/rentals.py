@@ -1,7 +1,7 @@
 import json
 from fastapi import APIRouter, HTTPException, Depends, status, Query, Path, Response
-from datetime import datetime, timezone
-from typing import List, Union
+from datetime import timezone
+from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import update
 
@@ -20,12 +20,11 @@ from app.models import (
     NotFoundError,
     ServiceUnavailableError,
     GatewayTimeoutError,
+    BadGatewayError,
+    InternalServerError,
 )
 
-from app.redis import ACTIVATE_REDIS
-
-if ACTIVATE_REDIS:
-    from app.redis import redis_client
+from app.redis import RentalCache, get_rental_cache
 
 router = APIRouter(prefix='/v1/rentals', tags=['Rentals'])
 CACHE_HEADER = "CACHE_STATUS"   # Solo se usa si ACTIVATE_REDIS es True
@@ -40,6 +39,8 @@ CACHE_HEADER = "CACHE_STATUS"   # Solo se usa si ACTIVATE_REDIS es True
         '403': {'model': ForbiddenError},
         '404': {'model': NotFoundError},
         '409': {'model': ConflictError},
+        '500': {'model': InternalServerError},
+        '502': {'model': BadGatewayError},
         '503': {'model': ServiceUnavailableError},
         '504': {'model': GatewayTimeoutError},
     }
@@ -47,6 +48,7 @@ CACHE_HEADER = "CACHE_STATUS"   # Solo se usa si ACTIVATE_REDIS es True
 def create_rental(
     rental_in: RentalRequest,
     db: Session = Depends(get_db),
+    cache: RentalCache = Depends(get_rental_cache),
     admin_auth: dict = Depends(admin_validation)
 ) -> RentalResponse:
     # 1. Validar fechas
@@ -82,19 +84,21 @@ def create_rental(
         db.rollback()
         try:
             liberar_unidad(rental_in.equipmentId)
-        except HTTPException:
-            # Si la compensación también falla, queda una unidad reservada
-            # sin arriendo asociado. Es un costo aceptado que se documenta
-            # en el ADR de resiliencia (D4): no hay forma de garantizar
-            # atomicidad entre dos servicios sin una transacción
-            # distribuida, que está fuera del alcance de este encargo.
-            pass
+        except HTTPException as compensation_error:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "code": "RENTAL_COMPENSATION_FAILED",
+                    "message": (
+                        "No se pudo guardar el arriendo ni liberar "
+                        "la unidad reservada."
+                    ),
+                },
+            ) from compensation_error
         raise
     db.refresh(db_rental)
 
-    if ACTIVATE_REDIS:
-        for key in redis_client.scan_iter("rentals:list:*"):
-            redis_client.delete(key)
+    cache.invalidate()
     
     return build_rental_response(db_rental)
 
@@ -113,25 +117,25 @@ def get_all_rentals(
     limit: int = Query(20, ge=1, le=100, description="Límite de resultados"),
     offset: int = Query(0, ge=0, description="Desplazamiento para paginación"),
     db: Session = Depends(get_db),
+    cache: RentalCache = Depends(get_rental_cache),
     client_auth: dict = Depends(client_validation)
 ) -> List[RentalResponse]:
-    if ACTIVATE_REDIS:
-        cache_key = f"rentals:list:{limit}:{offset}"
-        cached = redis_client.get(cache_key)
-        if cached:
-            results = [RentalResponse.model_validate(r) for r in json.loads(cached)]
+    cache_key = f"rentals:list:{limit}:{offset}"
+    cached = cache.get(cache_key)
+    if cached:
+        results = [RentalResponse.model_validate(r) for r in json.loads(cached)]
+        if cache.enabled:
             response.headers[CACHE_HEADER] = "HIT"
-            return results
+        return results
 
     rentals = db.query(Rental).order_by(Rental.id).offset(offset).limit(limit).all()
     results = [build_rental_response(r) for r in rentals]
 
-    if ACTIVATE_REDIS:
-        redis_client.setex(
-            cache_key,
-            60,
-            json.dumps([r.model_dump(mode="json") for r in results])
-        )
+    cache.set(
+        cache_key,
+        json.dumps([r.model_dump(mode="json") for r in results]),
+    )
+    if cache.enabled:
         response.headers[CACHE_HEADER] = "MISS"
     
     return results
@@ -150,15 +154,16 @@ def get_rental_by_id(
     response: Response,
     rentalId: int = Path(..., ge=1, description="ID del arriendo"),
     db: Session = Depends(get_db),
+    cache: RentalCache = Depends(get_rental_cache),
     client_auth: dict = Depends(client_validation)
 ) -> RentalResponse:
-    if ACTIVATE_REDIS:
-        cache_key = f"rental:{rentalId}"
-        cached = redis_client.get(cache_key)
-        if cached:
-            result = RentalResponse.model_validate(json.loads(cached))
+    cache_key = f"rental:{rentalId}"
+    cached = cache.get(cache_key)
+    if cached:
+        result = RentalResponse.model_validate(json.loads(cached))
+        if cache.enabled:
             response.headers[CACHE_HEADER] = "HIT"
-            return result
+        return result
 
     rental = db.query(Rental).filter(Rental.id == rentalId).first()
     if not rental:
@@ -169,12 +174,8 @@ def get_rental_by_id(
 
     result = build_rental_response(rental)
 
-    if ACTIVATE_REDIS:
-        redis_client.setex(
-            cache_key,
-            60,
-            json.dumps(result.model_dump(mode="json"))
-        )
+    cache.set(cache_key, json.dumps(result.model_dump(mode="json")))
+    if cache.enabled:
         response.headers[CACHE_HEADER] = "MISS"
 
     return result
@@ -188,6 +189,8 @@ def get_rental_by_id(
         '403': {'model': ForbiddenError},
         '404': {'model': NotFoundError},
         '409': {'model': ConflictError},
+        '500': {'model': InternalServerError},
+        '502': {'model': BadGatewayError},
         '503': {'model': ServiceUnavailableError},
         '504': {'model': GatewayTimeoutError},
     },
@@ -196,57 +199,10 @@ def get_rental_by_id(
 def cancel_rental(
     rentalId: int = Path(..., ge=1),
     db: Session = Depends(get_db),
-    admin_auth: dict = Depends(admin_validation),
+    cache: RentalCache = Depends(get_rental_cache),
+    admin_auth: dict = Depends(admin_validation)
 ) -> RentalResponse:
-    rental = db.execute(
-        update(Rental)
-        .where(Rental.id == rentalId, Rental.status == "ACTIVE")
-        .values(status="CANCELLED")
-        .returning(Rental)
-    ).scalar_one_or_none()
-
-    if rental is None:
-        db.rollback()
-
-        # EN un caso limite esto podria dar un codigo incorrecto si rental cambia de estado entre la consulta y el update, pero es un caso muy raro y no se considera crítico para este encargo.
-        # El worst case scenario es un codigo incorrecto pero el update se mantiene atomico
-        current = db.get(Rental, rentalId)
-
-        if current is None:
-            raise HTTPException(
-                status_code=404,
-                detail={
-                    "code": "RENTAL_NOT_FOUND",
-                    "message": f"Arriendo {rentalId} no encontrado.",
-                },
-            )
-
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "code": "INVALID_STATE_TRANSITION",
-                "message": (
-                    f"No se puede cancelar un arriendo "
-                    f"que está en estado {current.status}."
-                ),
-            },
-        )
-
-    response = build_rental_response(rental)
-
-    try:
-        liberar_unidad(rental.equipment_id)
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-
-    if ACTIVATE_REDIS:
-        redis_client.delete(f"rental:{rentalId}")
-        for key in redis_client.scan_iter("rentals:list:*"):
-            redis_client.delete(key)
-
-    return response
+    return _finish_rental(rentalId, "CANCELLED", db, cache)
 
 
 @router.post(
@@ -258,6 +214,8 @@ def cancel_rental(
         '403': {'model': ForbiddenError},
         '404': {'model': NotFoundError},
         '409': {'model': ConflictError},
+        '500': {'model': InternalServerError},
+        '502': {'model': BadGatewayError},
         '503': {'model': ServiceUnavailableError},
         '504': {'model': GatewayTimeoutError},
     },
@@ -266,34 +224,44 @@ def cancel_rental(
 def return_rental(
     rentalId: int = Path(..., ge=1),
     db: Session = Depends(get_db),
-    admin_auth: dict = Depends(admin_validation),
+    cache: RentalCache = Depends(get_rental_cache),
+    admin_auth: dict = Depends(admin_validation)
+) -> RentalResponse:
+    return _finish_rental(rentalId, "COMPLETED", db, cache)
+
+
+def _finish_rental(
+    rental_id: int,
+    final_status: str,
+    db: Session,
+    cache: RentalCache,
 ) -> RentalResponse:
     rental = db.execute(
         update(Rental)
-        .where(Rental.id == rentalId, Rental.status == "ACTIVE")
-        .values(status="COMPLETED")
+        .where(Rental.id == rental_id, Rental.status == "ACTIVE")
+        .values(status=final_status)
         .returning(Rental)
     ).scalar_one_or_none()
 
     if rental is None:
         db.rollback()
-        current = db.get(Rental, rentalId)
+        current = db.get(Rental, rental_id)
 
         if current is None:
             raise HTTPException(
-                status_code=404,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail={
                     "code": "RENTAL_NOT_FOUND",
-                    "message": f"Arriendo {rentalId} no encontrado.",
+                    "message": f"Arriendo {rental_id} no encontrado.",
                 },
             )
 
         raise HTTPException(
-            status_code=409,
+            status_code=status.HTTP_409_CONFLICT,
             detail={
                 "code": "INVALID_STATE_TRANSITION",
                 "message": (
-                    f"No se puede retornar un arriendo "
+                    f"No se puede cambiar un arriendo "
                     f"que está en estado {current.status}."
                 ),
             },
@@ -308,11 +276,7 @@ def return_rental(
         db.rollback()
         raise
 
-    if ACTIVATE_REDIS:
-        redis_client.delete(f"rental:{rentalId}")
-        for key in redis_client.scan_iter("rentals:list:*"):
-            redis_client.delete(key)
-
+    cache.invalidate(rental_id)
     return response
 
 def build_rental_response(rental: Rental) -> RentalResponse:

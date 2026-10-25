@@ -10,9 +10,6 @@ services:
     env_file:
       - .env
 
-    ports:
-      - "${EQUIPOS_GRPC_PORT:-50051}:50051"
-
     depends_on:
       equipos-db:
         condition: service_healthy
@@ -26,10 +23,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-equipos_db}
       POSTGRES_USER: ${POSTGRES_USER:-equipos_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-equipos_password}
-
-    ports:
-      - "${EQUIPOS_DB_PORT:-5433}:5432"
-
 
     healthcheck:
       test:

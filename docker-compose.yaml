@@ -10,9 +10,6 @@ services:
     env_file:
       - .env
 
-    ports:
-      - "${EQUIPOS_GRPC_PORT}:50051"
-
     depends_on:
       equipos-db:
         condition: service_healthy
@@ -66,9 +63,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
-    ports:
-      - "${EQUIPOS_DB_PORT}:5432"
-
     volumes:
       - equipos_postgres_data:/var/lib/postgresql/data
 
@@ -91,9 +85,6 @@ services:
       POSTGRES_USER: arriendos_user
       POSTGRES_PASSWORD: arriendos_password
       POSTGRES_DB: arriendo-db
-
-    ports:
-      - "5430:5432"
 
     volumes:
       - rentals_pg_data:/var/lib/postgresql/data

@@ -13,6 +13,7 @@ from app.bd_models import Rental
 from app.database import get_db
 from app.main import app
 from app.routers.v1 import rentals
+from app.redis import get_rental_cache
 
 
 @pytest.mark.parametrize(
@@ -52,7 +53,12 @@ def test_solo_una_transicion_libera_la_unidad(
             )
 
             try:
-                endpoint(rentalId=rental_id, db=session, admin_auth={})
+                endpoint(
+                    rentalId=rental_id,
+                    db=session,
+                    cache=get_rental_cache(),
+                    admin_auth={},
+                )
                 return 200, None
             except HTTPException as error:
                 return error.status_code, error.detail["code"]
@@ -89,10 +95,6 @@ def test_reservas_concurrentes_ultima_unidad_devuelven_409(
         def code(self):
             return grpc.StatusCode.FAILED_PRECONDITION
 
-    class FakeChannel:
-        def close(self):
-            pass
-
     class FakeEquipmentStub:
         def ConsultarDisponibilidadEquipo(self, request, timeout):
             with lock:
@@ -107,7 +109,7 @@ def test_reservas_concurrentes_ultima_unidad_devuelven_409(
                 stock["available"] -= 1
 
     stub = FakeEquipmentStub()
-    monkeypatch.setattr(grpc_client, "get_grpc_stub", lambda: (stub, FakeChannel()))
+    monkeypatch.setattr(grpc_client, "get_grpc_stub", lambda: stub)
     # El fixture general simula la reserva; aquí se ejercita el cliente gRPC real.
     monkeypatch.setattr(rentals, "reservar_unidad", grpc_client.reservar_unidad)
 
