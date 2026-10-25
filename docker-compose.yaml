@@ -10,8 +10,8 @@ services:
     env_file:
       - .env
 
-    ports:
-      - "${EQUIPOS_GRPC_PORT}:50051"
+    #ports:
+    #  - "${EQUIPOS_GRPC_PORT}:50051"
 
     depends_on:
       equipos-db:
@@ -29,10 +29,10 @@ services:
     restart: always
 
     ports:
-      - "8080:8080"
+      - "${ARRIENDOS_API_PORT}:8080"
 
     environment:
-      DATABASE_URL: postgresql://arriendos_user:arriendos_password@arriendo-db:5432/arriendo-db
+      DATABASE_URL: postgresql://${ARRIENDO_DB_USER}:${ARRIENDO_DB_PASSWORD}@arriendo-db:5432/${ARRIENDO_DB_NAME}
       REDIS_HOST: arriendos-redis
       ACTIVATE_REDIS: ${ACTIVATE_REDIS}
       EQUIPOS_GRPC_URL: "${EQUIPOS_GRPC_URL}"
@@ -86,18 +86,18 @@ services:
     restart: always
 
     environment:
-      POSTGRES_USER: arriendos_user
-      POSTGRES_PASSWORD: arriendos_password
-      POSTGRES_DB: arriendo-db
+      POSTGRES_USER: ${ARRIENDO_DB_USER}
+      POSTGRES_PASSWORD: ${ARRIENDO_DB_PASSWORD}
+      POSTGRES_DB: ${ARRIENDO_DB_NAME}
 
     ports:
-      - "5430:5432"
+      - "${ARRIENDO_DB_PORT}:5432"
 
     volumes:
       - rentals_pg_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U arriendos_user -d arriendo-db"]
+      test: ["CMD-SHELL", "pg_isready -U ${ARRIENDO_DB_USER} -d ${ARRIENDO_DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
