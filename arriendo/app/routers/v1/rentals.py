@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, status, Query, Path, Resp
 from datetime import timezone
 from typing import List
 from sqlalchemy.orm import Session
-
+from sqlalchemy import update
 
 from app.database import get_db
 from app.bd_models import Client, Rental
@@ -236,64 +236,48 @@ def _finish_rental(
     db: Session,
     cache: RentalCache,
 ) -> RentalResponse:
-    rental = db.query(Rental).filter(Rental.id == rental_id).first()
-    if not rental:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "code": "RENTAL_NOT_FOUND",
-                "message": f"Arriendo {rental_id} no encontrado.",
-            },
-        )
-    updated = (
-        db.query(Rental)
-        .filter(Rental.id == rental_id, Rental.status == "ACTIVE")
-        .update({Rental.status: final_status}, synchronize_session="fetch")
-    )
-    if not updated:
+    rental = db.execute(
+        update(Rental)
+        .where(Rental.id == rental_id, Rental.status == "ACTIVE")
+        .values(status=final_status)
+        .returning(Rental)
+    ).scalar_one_or_none()
+
+    if rental is None:
+        db.rollback()
+        current = db.get(Rental, rental_id)
+
+        if current is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "RENTAL_NOT_FOUND",
+                    "message": f"Arriendo {rental_id} no encontrado.",
+                },
+            )
+
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
                 "code": "INVALID_STATE_TRANSITION",
-                "message": "El arriendo ya no está en estado ACTIVE.",
+                "message": (
+                    f"No se puede cambiar un arriendo "
+                    f"que está en estado {current.status}."
+                ),
             },
         )
 
+    response = build_rental_response(rental)
+
     try:
+        liberar_unidad(rental.equipment_id)
         db.commit()
-        db.refresh(rental)
     except Exception:
         db.rollback()
         raise
 
-    try:
-        liberar_unidad(rental.equipment_id)
-    except HTTPException as release_error:
-        try:
-            db.query(Rental).filter(
-                Rental.id == rental_id,
-                Rental.status == final_status,
-            ).update({Rental.status: "ACTIVE"}, synchronize_session=False)
-            db.commit()
-        except Exception as compensation_error:
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail={
-                    "code": "RENTAL_COMPENSATION_FAILED",
-                    "message": (
-                        "No se pudo liberar la unidad ni restaurar "
-                        "el estado activo del arriendo."
-                    ),
-                },
-            ) from compensation_error
-        cache.invalidate(rental_id)
-        raise release_error
-
-    db.refresh(rental)
     cache.invalidate(rental_id)
-
-    return build_rental_response(rental)
+    return response
 
 def build_rental_response(rental: Rental) -> RentalResponse:
     start_date = (

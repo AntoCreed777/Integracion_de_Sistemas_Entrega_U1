@@ -8,7 +8,7 @@ services:
     container_name: equipos-api
 
     env_file:
-      - .env.example #poner .env.example para probar
+      - .env
 
     depends_on:
       equipos-db:
@@ -47,6 +47,8 @@ services:
 
     environment:
       DATABASE_URL: postgresql+psycopg2://arriendos_test_user:arriendos_test_password@arriendo-test-db:5432/arriendo_test_db
+      ADMIN_API_KEY: apikey_admin
+      CLIENT_API_KEY: apikey_cliente
 
     depends_on:
       arriendo-test-db:

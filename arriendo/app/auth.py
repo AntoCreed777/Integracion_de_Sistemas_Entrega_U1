@@ -1,11 +1,11 @@
+import os
 from fastapi import Security, HTTPException, status, Depends
 from fastapi.security.api_key import APIKeyHeader
 from typing import Optional
 
-# Diccionario que actúa como tu "base de datos" de API Keys
 API_KEYS = {
-    "apikey_admin": {"client": "Sistema Interno", "role": "admin"},
-    "apikey_cliente": {"client": "Dashboard", "role": "readonly"}
+    os.environ["ADMIN_API_KEY"]: {"client": "Sistema Interno", "role": "admin"},
+    os.environ["CLIENT_API_KEY"]: {"client": "Dashboard", "role": "readonly"},
 }
 
 api_key_header = APIKeyHeader(name="API-Key", auto_error=False)
@@ -19,7 +19,6 @@ def client_validation(key: Optional[str] = Security(api_key_header)):
         )
     return client_data
 
-# Dependencia extra para endpoints que requieren escritura
 def admin_validation(client_data: dict = Depends(client_validation)):
     if client_data["role"] != "admin":
         raise HTTPException(

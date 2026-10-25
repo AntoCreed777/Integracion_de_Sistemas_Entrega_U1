@@ -34,6 +34,8 @@ services:
       ACTIVATE_REDIS: ${ACTIVATE_REDIS}
       EQUIPOS_GRPC_URL: "${EQUIPOS_GRPC_URL}"
       GRPC_TIMEOUT_SECONDS: "${GRPC_TIMEOUT_SECONDS}"
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      CLIENT_API_KEY: ${CLIENT_API_KEY}
 
     depends_on:
       arriendo-db:
