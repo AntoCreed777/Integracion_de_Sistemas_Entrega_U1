@@ -67,3 +67,14 @@ docker rm -v <id_contenedor>
 ```
 
 Esta última operación elimina el contenedor y los volúmenes anónimos asociados a él.
+
+
+# Declaración de uso de inteligencia artificial
+
+El proyecto se desarrolló siguiendo la metodología *Spec-Driven Development* (SDD), en la cual la especificación es el artefacto central del desarrollo y la implementación se deriva de ella. En este flujo se utilizó **Claude Code** como asistente de generación de código, bajo el siguiente esquema de trabajo:
+
+- **Especificación (autoría del equipo):** el equipo definió los requisitos, el contrato de la API (endpoints, modelos y códigos de error), la frontera entre los servicios de Arriendos y Equipos, y las decisiones de arquitectura documentadas en los ADR.
+- **Generación (asistida por IA):** a partir de dichas especificaciones, la herramienta generó el código de implementación de los parte de los servicios (routers FastAPI, cliente gRPC, modelos de base de datos y el esquema de autenticación por doble API key), además de borradores de apoyo para la documentación (ADR e interpretación de resultados).
+- **Verificación y ajuste (autoría del equipo):** el equipo revisó el código generado contra la especificación, probó el comportamiento de los endpoints y adaptó la implementación y los textos cuando no cumplían lo especificado o los comentarios recibidos en la revisión.
+
+Las decisiones de diseño y arquitectura son del equipo; la IA se utilizó como herramienta de implementación y no como fuente de dichas decisiones. El equipo se hace responsable del contenido y del funcionamiento del sistema entregado.
