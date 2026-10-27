@@ -86,9 +86,6 @@ services:
       POSTGRES_PASSWORD: ${ARRIENDO_DB_PASSWORD}
       POSTGRES_DB: ${ARRIENDO_DB_NAME}
 
-    ports:
-      - "${ARRIENDO_DB_PORT}:5432"
-
     volumes:
       - rentals_pg_data:/var/lib/postgresql/data
 
