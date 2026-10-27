@@ -2,11 +2,11 @@ services:
   equipos-db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: equipos_db
-      POSTGRES_USER: equipos_user
-      POSTGRES_PASSWORD: equipos_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U equipos_user -d equipos_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -16,12 +16,11 @@ services:
       context: ./Equipos
       dockerfile: Dockerfile
       target: base
+    env_file:
+      - .env  # Inyecta toda la configuración de base de datos automáticamente
     environment:
-      DATABASE_HOST: equipos-db
-      DATABASE_PORT: 5432
-      DATABASE_NAME: equipos_db
-      DATABASE_USER: equipos_user
-      DATABASE_PASSWORD: equipos_password
+      # Dejamos estos dos explícitos aquí por si son específicos de este entorno
+      # o puedes moverlos a tu .env y borrar este bloque 'environment'
       GRPC_HOST: "[::]"
       GRPC_PORT: 50051
     depends_on:
@@ -40,8 +39,11 @@ services:
       dockerfile: cliente-node/Dockerfile
       additional_contexts:
         equipos: ./Equipos  # Para poder acceder a equipos.proto
+    env_file:
+      - .env  # Inyecta EQUIPOS_GRPC_URL automáticamente
     environment:
-      EQUIPOS_GRPC_URL: equipos-api:50051
+      # Tu .env tiene GRPC_TIMEOUT_SECONDS, pero Node parece usar MS.
+      # Lo dejamos explícito aquí para que no se rompa tu app de Node.
       GRPC_TIMEOUT_MS: 5000
     depends_on:
       equipos-api:

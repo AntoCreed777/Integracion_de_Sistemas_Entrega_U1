@@ -4,31 +4,25 @@ services:
       context: ./Equipos
       dockerfile: Dockerfile
       target: test
-
     container_name: equipos-api
-
     env_file:
       - .env
-
     depends_on:
       equipos-db:
         condition: service_healthy
 
   equipos-db:
     image: postgres:16-alpine
-
     container_name: equipos-db
-
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-equipos_db}
-      POSTGRES_USER: ${POSTGRES_USER:-equipos_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-equipos_password}
-
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-equipos_user} -d ${POSTGRES_DB:-equipos_db}"
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
         ]
       interval: 5s
       timeout: 5s
@@ -41,34 +35,28 @@ services:
       target: test
       additional_contexts:
         equipos: ./Equipos  # Para poder acceder a equipos.proto
-
-
     container_name: arriendo-tests
-
+    env_file:
+      - .env # Inyecta las API keys y variables generales
     environment:
-      DATABASE_URL: postgresql+psycopg2://arriendos_test_user:arriendos_test_password@arriendo-test-db:5432/arriendo_test_db
-      ADMIN_API_KEY: apikey_admin
-      CLIENT_API_KEY: apikey_cliente
-
+      # URL dinámica que apunta al contenedor arriendo-test-db
+      DATABASE_URL: postgresql+psycopg2://${ARRIENDO_DB_USER}:${ARRIENDO_DB_PASSWORD}@arriendo-test-db:5432/${ARRIENDO_DB_NAME}_test
     depends_on:
       arriendo-test-db:
         condition: service_healthy
 
   arriendo-test-db:
     image: postgres:16-alpine
-
     container_name: arriendo-test-db
-
     environment:
-      POSTGRES_DB: arriendo_test_db
-      POSTGRES_USER: arriendos_test_user
-      POSTGRES_PASSWORD: arriendos_test_password
-
+      POSTGRES_DB: ${ARRIENDO_DB_NAME}_test
+      POSTGRES_USER: ${ARRIENDO_DB_USER}
+      POSTGRES_PASSWORD: ${ARRIENDO_DB_PASSWORD}
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U arriendos_test_user -d arriendo_test_db"
+          "pg_isready -U ${ARRIENDO_DB_USER} -d ${ARRIENDO_DB_NAME}_test"
         ]
       interval: 5s
       timeout: 5s
