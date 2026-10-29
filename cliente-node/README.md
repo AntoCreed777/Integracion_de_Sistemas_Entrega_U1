@@ -5,65 +5,42 @@ Equipos implementado en Python. Carga directamente el archivo
 [`../Equipos/equipos.proto`](../Equipos/equipos.proto), por lo que no necesita
 código generado manualmente.
 
-## Requisitos
+## 1. Ejecución local
 
-- Node.js 18+
-- El servicio `equipos-api` corriendo en `localhost:50051` o en la red Docker
-  con el nombre `equipos-api:50051`.
+### Requisitos
 
-## Instalación
+- Node.js 18+.
+- El archivo `Equipos/equipos.proto`, incluido en el repositorio.
+- Un servicio gRPC de Equipos accesible desde el host.
+
+### Instalación
+
+Desde la raíz del repositorio:
 
 ```bash
 cd cliente-node
 npm install
 ```
 
-## Uso
+### Uso
+
+Desde la carpeta `cliente-node`, configura la dirección del servicio y ejecuta
+una operación:
 
 ```bash
-node src/index.js consultar 1
-node src/index.js disponibilidad 1
-node src/index.js listar
-node src/index.js reservar 1
-node src/index.js liberar 1
-node src/index.js demo 1
-```
-
-También puedes usar los scripts de `package.json`:
-
-```bash
-npm run consultar -- 1
-npm run disponibilidad -- 1
-npm run listar
-npm run reservar -- 1
-npm run liberar -- 1
-npm run demo -- 1
-```
-
-## Ejecutarlo contra Docker
-
-Desde la raíz del proyecto:
-
-```bash
-cp .env.example .env
-```
-
-Y luego levanta solo los servicios necesarios:
-
-```bash
-docker compose up -d equipos-db equipos-api
-```
-
-Después, desde `cliente-node`:
-
-```bash
+EQUIPOS_GRPC_URL=localhost:50051 npm run consultar -- 1
+EQUIPOS_GRPC_URL=localhost:50051 npm run disponibilidad -- 1
+EQUIPOS_GRPC_URL=localhost:50051 npm run listar
+EQUIPOS_GRPC_URL=localhost:50051 npm run reservar -- 1
+EQUIPOS_GRPC_URL=localhost:50051 npm run liberar -- 1
 EQUIPOS_GRPC_URL=localhost:50051 npm run demo -- 1
 ```
 
-Si el cliente corre dentro de la misma red Docker, usa:
+El comando solo funcionará si algún entorno publica el puerto gRPC en
+`localhost:50051`. También puedes configurar otra dirección:
 
 ```bash
-EQUIPOS_GRPC_URL=equipos-api:50051 npm run demo -- 1
+EQUIPOS_GRPC_URL=host:puerto npm run demo -- 1
 ```
 
 El timeout se puede ajustar con:
@@ -72,9 +49,13 @@ El timeout se puede ajustar con:
 GRPC_TIMEOUT_MS=5000 npm run listar
 ```
 
-## Pruebas de interoperabilidad en Docker
+## 2. Ejecución en Docker
 
-Desde la raíz del proyecto, ejecuta el compose dedicado:
+El Compose principal mantiene gRPC dentro de la red interna y no publica el
+puerto `50051` en el host. Para ejecutar el cliente Node.js en Docker utiliza
+el Compose dedicado de interoperabilidad.
+
+Desde la raíz del repositorio:
 
 ```bash
 docker compose -f docker-compose.grpc-client.test.yaml up \
@@ -83,10 +64,17 @@ docker compose -f docker-compose.grpc-client.test.yaml up \
   --exit-code-from cliente-node-tests
 ```
 
-El flujo levanta PostgreSQL, espera a que el servidor gRPC Python esté
-saludable y ejecuta el cliente Node.js dentro de otro contenedor. Las pruebas
-verifican el RPC server-streaming `ListarEquipos` y el manejo del estado
-`NOT_FOUND` de `ConsultarEquipo`.
+Este Compose:
+
+1. Levanta PostgreSQL para Equipos.
+2. Levanta el servicio gRPC de Equipos.
+3. Espera a que el servicio gRPC esté saludable.
+4. Construye el contenedor del cliente Node.js.
+5. Ejecuta las pruebas de interoperabilidad dentro de Docker.
+
+Las pruebas verifican el RPC server-streaming `ListarEquipos` y el manejo del
+estado `NOT_FOUND` de `ConsultarEquipo`. El Dockerfile copia automáticamente
+`Equipos/equipos.proto` dentro de la imagen del cliente.
 
 Para eliminar los contenedores y la red al finalizar:
 

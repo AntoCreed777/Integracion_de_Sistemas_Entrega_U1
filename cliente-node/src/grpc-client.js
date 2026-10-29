@@ -1,9 +1,20 @@
 const path = require("node:path");
+const fs = require("node:fs");
 const grpc = require("@grpc/grpc-js");
 const protoLoader = require("@grpc/proto-loader");
 
-// Esto esta pensado para funcionar en el contenedor de Docker, donde el .proto se encuentra en la raíz del proyecto. Si se ejecuta localmente, es posible que se necesite ajustar la ruta según tu estructura de carpetas.
-const PROTO_PATH = path.resolve(__dirname, "../equipos.proto");
+const protoCandidates = [
+  process.env.EQUIPOS_PROTO_PATH,
+  path.resolve(__dirname, "../equipos.proto"),
+  path.resolve(__dirname, "../../Equipos/equipos.proto"),
+].filter(Boolean);
+const PROTO_PATH = protoCandidates.find((candidate) => fs.existsSync(candidate));
+
+if (!PROTO_PATH) {
+  throw new Error(
+    "No se encontró equipos.proto. Usa EQUIPOS_PROTO_PATH o ejecuta el cliente desde el repositorio.",
+  );
+}
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: false,
