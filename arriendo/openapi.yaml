@@ -64,7 +64,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotAuthorizedError'
         '403':
-          description: Permisos insuficientes (requiere rol `operator`)
+          description: Permisos insuficientes (requiere rol `admin`)
           content:
             application/json:
               schema:
@@ -127,7 +127,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotAuthorizedError'
         '403':
-          description: Permisos insuficientes (requiere rol `reader` u `operator`)
+          description: Permisos insuficientes (requiere rol `readonly` o `admin`)
           content:
             application/json:
               schema:
@@ -167,7 +167,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotAuthorizedError'
         '403':
-          description: Permisos insuficientes (requiere rol `reader` u `operator`)
+          description: Permisos insuficientes (requiere rol `readonly` o `admin`)
           content:
             application/json:
               schema:
@@ -211,7 +211,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotAuthorizedError'
         '403':
-          description: Permisos insuficientes (requiere rol `operator`)
+          description: Permisos insuficientes (requiere rol `admin`)
           content:
             application/json:
               schema:
@@ -304,7 +304,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotAuthorizedError'
         '403':
-          description: Permisos insuficientes (requiere rol `reader` u `operator`)
+          description: Permisos insuficientes (requiere rol `readonly` o `admin`)
           content:
             application/json:
               schema:
@@ -344,7 +344,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotAuthorizedError'
         '403':
-          description: Permisos insuficientes (requiere rol `reader` u `operator`)
+          description: Permisos insuficientes (requiere rol `readonly` o `admin`)
           content:
             application/json:
               schema:
@@ -390,7 +390,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotAuthorizedError'
         '403':
-          description: Permisos insuficientes (requiere rol `operator`)
+          description: Permisos insuficientes (requiere rol `admin`)
           content:
             application/json:
               schema:
@@ -472,7 +472,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotAuthorizedError'
         '403':
-          description: Permisos insuficientes (requiere rol `operator`)
+          description: Permisos insuficientes (requiere rol `admin`)
           content:
             application/json:
               schema:
@@ -821,5 +821,5 @@ components:
       in: header
       name: API-Key
       description: |-
-        Doble apikey para autenticación, una para clientes con las facilidades de lectura
-        y otra para operadores con permisos de escritura. Debe enviarse en el header `API-Key`.
+        Se usan dos API Keys: el rol `readonly` permite consultas y el rol `admin`
+        permite además operaciones de escritura. Debe enviarse en el header `API-Key`.
