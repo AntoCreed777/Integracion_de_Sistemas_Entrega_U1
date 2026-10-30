@@ -77,13 +77,13 @@ python test_resiliencia.py
 
 **Objetivo:** Verificar que la conexión no se pudo realizar y que la respuesta entregada no sea un timeout. 
 
-**Resultados Esperados:** Respuesta HTTP `503` por falla de conexión. No debe recibir una respuesta de HTTP `504`.
+**Resultado esperado:** HTTP `503` (`UNAVAILABLE`) cuando el servicio no está escuchando y la conexión se rechaza inmediatamente. Este escenario es distinto de pausar un servicio que sigue ejecutándose, pero no responde.
 
 ## Test 3: Falla por demora
 
 **Objetivos:** Evaluar la reacción del servidor frente a un servicio activo pero que no entrega respuesta. Busca obtener un `timeout`
 
-**Resultados Esperados:** Respuesta HTTP `504` por exeder el tiempo máximo de demora en responder.
+**Resultado observado en la evaluación:** HTTP `504` (`DEADLINE_EXCEEDED`) al pausar `equipos-api` con `docker pause` e intentar un `POST /v1/rentals` válido. El script mide el tiempo y verifica que se encuentre cerca del límite configurado (`GRPC_TIMEOUT_SECONDS`, actualmente 3 segundos). El `504` es correcto porque el proceso no responde antes del deadline; no es una conexión rechazada.
 
 ## Test 4: Checkeo de resiliencia
 
@@ -101,6 +101,5 @@ python test_resiliencia.py
 
 **Objetivos:** Evaluar los tipos de respuesta ante un servicio caído, con peticiones válidas y peticiones inválidas.
 
-**Resultados Esperados:** Respuesta HTTP `404` en la primera consulta dado que es una peticiones inválida, independiente del estado del servicio de equipos, y una respuesta HTTP `503`al intentar una peticion válida, pero con el servicio caído. 
-
+**Resultados esperados:** HTTP `404` para el arriendo inexistente, independientemente del estado de Equipos. Para una petición válida con la conexión rechazada inmediatamente se espera HTTP `503`; si Equipos está pausado o lento y no responde antes del deadline, se espera HTTP `504`.
 
